@@ -1,0 +1,67 @@
+# =============================================================================
+# AMOD amygdala encoding model — reproduces develop_encoding_models_amygdala.m
+# =============================================================================
+# This config drives the default pipeline: PLS regression with 20 components
+# on the whole amygdala mask from canlab2018, 5-fold random CV.
+
+paths:
+  bids_root: /data/ds002837          # OpenNeuro dataset root
+  osf_fc7_mat: /data/osf/500_days_of_summer_fc7_features.mat
+  output_dir: ./output/amygdala
+  iaps_csv: /data/osf/IAPS_data_amygdala_z.csv
+  oasis_csv: /data/osf/OASIS_data_amygdala_z.csv
+
+subjects:
+  - "01"
+  - "02"
+  - "03"
+  - "04"
+  - "05"
+  - "06"
+  - "07"
+  - "08"
+  - "09"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+
+roi:
+  - name: amygdala
+    mask_path: /data/masks/canlab2018_amygdala_combined.nii.gz
+    atlas: canlab2018
+
+features:
+  type: fc7                          # EmoNet fc7 layer
+  n_features: 4096                   # fc7 dimensionality
+  frame_sampling: 5                  # every 5th frame (MATLAB: vid_feat_fullCorr2(:, 1:5:end ...))
+  align_method: resample_poly        # scipy.signal.resample_poly (≈ MATLAB resample)
+  zscore: false                      # MATLAB does NOT zscore features before PLS
+
+hrf:
+  model: spm_canonical              # spm_hrf(1); canonical double-gamma
+  dt: 1.0                           # sampling rate in seconds
+
+model:
+  type: pls                          # MATLAB: plsregress
+  pls_n_components: 20               # MATLAB: ncomp = 20
+  standardize_X: true                # plsregress standardises by default
+  standardize_Y: true
+  mode: voxelwise                    # model each voxel (vs roi_mean)
+
+cv:
+  scheme: kfold                      # MATLAB: crossvalind('k', N, 5)
+  n_folds: 5                         # k = 5
+  seed: 42                           # for reproducibility (MATLAB had no seed)
+
+compute:
+  backend: cpu                       # set to 'torch' for GPU acceleration
+  device: cpu
+  amp: false

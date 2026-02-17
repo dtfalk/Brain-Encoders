@@ -1,0 +1,79 @@
+# =============================================================================
+# AMOD subregions encoding model — reproduces develop_encoding_models_subregions.m
+# =============================================================================
+# Models each amygdala subregion separately using canlab2018 parcels.
+# NOTE: The MATLAB script convolves BEFORE resampling (different order from
+# the amygdala script). This is handled by config and documented.
+
+paths:
+  bids_root: /data/ds002837
+  osf_fc7_mat: /data/osf/500_days_of_summer_fc7_features.mat
+  output_dir: ./output/subregions
+  iaps_csv: /data/osf/IAPS_data_amygdala_z.csv
+  oasis_csv: /data/osf/OASIS_data_amygdala_z.csv
+
+subjects:
+  - "01"
+  - "02"
+  - "03"
+  - "04"
+  - "05"
+  - "06"
+  - "07"
+  - "08"
+  - "09"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+
+# Four amygdala subregion masks from canlab2018
+# MATLAB: region_labels = {'CM', 'SF', 'AStr', 'LB'};
+roi:
+  - name: CM
+    mask_path: /data/masks/canlab2018_CM.nii.gz
+    atlas: canlab2018
+  - name: SF
+    mask_path: /data/masks/canlab2018_SF.nii.gz
+    atlas: canlab2018
+  - name: AStr
+    mask_path: /data/masks/canlab2018_AStr.nii.gz
+    atlas: canlab2018
+  - name: LB
+    mask_path: /data/masks/canlab2018_LB.nii.gz
+    atlas: canlab2018
+
+features:
+  type: fc7
+  n_features: 4096
+  frame_sampling: 5
+  align_method: resample_poly
+  zscore: false
+
+hrf:
+  model: spm_canonical
+  dt: 1.0
+
+model:
+  type: pls
+  pls_n_components: 20
+  standardize_X: true
+  standardize_Y: true
+  mode: voxelwise
+
+cv:
+  scheme: kfold
+  n_folds: 5
+  seed: 42
+
+compute:
+  backend: cpu
+  device: cpu
+  amp: false
