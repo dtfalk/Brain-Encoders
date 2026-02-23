@@ -1,22 +1,31 @@
 """
-Artifact save/load — betas, metadata, and provenance.
+Artifact Persistence
+====================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      save(['beta_sub-' ... '.mat'], 'b', '-v7.3')
-      save(['sub-' ... '_output.mat'], 'mean_diag_corr', '-v7.3')
-  - compile_matrices.m:
-      save(['..._output_compilation_matrix.mat'], 'matrix')
-Key matched choices:
-  - Betas saved as numpy arrays (.npy) for native Python consumption
-  - Also provide MATLAB-compatible CSV export in io/export_betas.py
-  - Provenance JSON saved alongside artifacts
-  - Config snapshot saved as YAML
-  - Directory structure: output_dir/artifacts/sub-XX/run-YY/roi-<name>/
-Assumptions / deviations:
-  - MATLAB saves .mat v7.3 (HDF5); we save .npy and .json
-  - We add provenance tracking that MATLAB doesn't have
-  - Voxel indices saved for mapping back to brain space
+Saves and loads model artefacts: betas, metrics, provenance, and config.
+
+Design Principles:
+    - NumPy ``.npy`` for fast native Python I/O
+    - JSON for metrics and provenance (human-readable, git-diffable)
+    - YAML snapshot of the config used for each run
+    - Directory structure: ``output_dir/artifacts/sub-XX/run-YY/roi-<name>/``
+    - Provenance tracking (absent in MATLAB) for full reproducibility
+
+Output Layout::
+
+    artifacts/sub-XX/run-YY/roi-<name>/
+        betas.npy            (D+1, V)
+        intercept.npy        (V,)
+        voxel_indices.npy    (V,)
+        metrics.json
+        provenance.json
+        config.yaml
+        mean_diag_corr.npy   (V,)   [extra]
+        diag_corr.npy        (K, V) [extra]
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``save_model_artifacts()``
+    - compile_matrices.m → ``load_model_artifacts()``
 """
 
 from __future__ import annotations

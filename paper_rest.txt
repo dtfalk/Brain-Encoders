@@ -1,0 +1,472 @@
+﻿Total paragraphs: 1140
+[301] (high and low frequencies). We produced color histograms for each IAPS and OASIS image and
+[303] calculated the median value for each color. We calculated the power spectral density of each
+[305] image using Fast Fourier Transform and then defined low frequencies as those with a radius < 30
+[306] pixels in Fourier space and high frequency as those with a radius > 50 pixels.
+[307] We conducted linear regression models with either the amygdala or visual cortex as the
+[308] outcome variable using standardized predictor variables of valence ratings, arousal ratings, the
+[309] interaction between valence and arousal (coded such that more positive and arousing images
+[310] would produce the strongest response in an encoding model) and controlling for the low-level
+[311] visual features of the median intensity of red, green, and blue, and the power in high and low
+[313] spatial frequency bands. We used the fitlme function in MATLAB to build the models for each
+[315] subject and performed group t-tests on the betas, treating subject as a random variable.
+[317] Controlling Amygdala Encoding Model Responses using Deep Image Synthesis
+[319] After verifying the performance of our encoding models on naturalistic images, we
+[321] wanted to synthesize artificial stimuli that could engage the encoding models of the amygdala
+[323] and different amygdala subregions. Previous studies have demonstrated related approaches can
+[325] target activation to specified units within the visual cortex in both humans and non-human
+[327] primates (Nguyen et al., 2016; Bashivan et al., 2019; Xiao and Kreiman, 2020; Wang and Ponce,
+[329] 2022). Here we extended this method to generate artificial stimuli that would target the amygdala
+[331] (Figure 2). We used a deep generator network trained on ImageNet (Nguyen et al., 2016) and the
+[333] outputs of our amygdala encoding models to map activation in layer fc7 of EmoNet as the
+[335] objective for activation maximization. This was accomplished by computing the dot product with
+[337] different sets of encoding model regression coefficients (beta estimates) that predicted the
+[338] responses of different amygdala voxels. Optimization was performed using an evolutionary
+[339] algorithm (Wang and Ponce, 2022) implemented in Python
+[340] (https://github.com/Animadversio/ActMax-Optimizer-Dev). We used this procedure to generate
+[341] artificial stimuli targeting the average amygdala response, individual amygdala subregions (LB,
+[342] CM, SF and AStr), visual cortex, and inferotemporal cortex.
+[344] Figure 2. Artificial image synthesis procedure. A deep generator network (DGN; blue arrow) initialized with a random code produces an artificial stimulus (yellow) that is fed as input into the encoding model (red). Beta estimates specifying the relationship between unit activity in the deep convolutional network and BOLD response patterns serve as the target for activation maximization. Forward and back propagation update the code to modify and generate an artificial stimulus that maximizes activation patterns in the target region. up: upconvolutional layer; conv: convolutional layer; fc: fully connected layer.
+[346] Artificial stimuli were generated with a random starting seed for each image. The
+[348] optimization algorithm did not converge for some seeds (producing an identical image); these
+[350] images were excluded from subsequent analyses. As a result, 4-5 different artificial stimuli were
+[352] generated for each region of interest for each subject, resulting in 80 artificial stimuli synthesized
+[354] per region of interest. An exception to this was the artificial stimuli generated for the
+[356] inferotemporal cortex; because it was used as a control region, 9 artificial stimuli were generated
+[358] for each subject resulting in a total of 160 artificial stimuli.
+[360] To assess the selectivity of encoding models, we assessed whether they responded
+[362] differentially to generated stimuli optimized for different regions of interest. Following the same
+[364] procedures used evaluate the naturalistic stimuli, we fed the artificial stimuli (n = 686) into all
+[365] encoding models and obtained a predicted activation for each of the artificial stimuli. We also
+[366] characterized low-level visual features such as color (red, blue, and green) and spectral power
+[367] (high and low frequencies) found in the synthesized artificial stimuli as predictors in our models.
+[368] We performed linear regressions on standardized variables to confirm that the synthesized
+[369] images activated their intended targets. We fit mixed-effects models for each subject with target
+[370] region for image synthesis (on vs off target), the subject used for image synthesis, and the low-
+[372] level visual features described above as predictors for within subject fixed effects. Separate
+[374] models were run to predict the activation of the amygdala, each of its subregions (LB, CM, SF
+[376] and AStr), and visual cortex. We used the fitlme function in MATLAB to build each model and
+[378] compared the betas of the models using t-tests.
+[380] To evaluate the discriminability of artificial stimuli, we performed a supervised
+[382] classification and examined confusions between the predicted and actual region targeted for
+[384] optimization. Multi-way classification models were estimated using partial least squares
+[386] discriminant analyses (7 components). Generalization performance was estimated using 5-fold
+[388] cross validation. Confusions between different image classes were assessing using a hierarchical
+[390] approach in a 7-way classification, with the number of clusters set to be the maximum number of
+[392] clusters in which all pairs of clusters are statistically discriminable from one another. To
+[394] visualize the results of this analysis, we generated a t-SNE plot (Maaten and Hinton, 2008) based
+[396] on the model predictions for each of the artificial stimuli.
+[398] Results
+[400] We found that visual features captured by deep convolutional neural networks are
+[402] encoded in amygdala responses to naturalistic, dynamic videos. Voxel-wise tests showed that the
+[403] mean performance of encoding models was well above chance (Figure 3). A mixed effects model
+[404] revealed that predictions of the average amygdala response were also above chance (≡¥¢╜^ = .049, SE
+[406] 12	= .0053, t(53) = 9.27, p < .001), and that there were marked differences in performance across
+[408] amygdala subregions (ΓêåBIC = 23.5, Likelihood Ratio = 36.5, p < .001). The first contrast
+[409] comparing LB to the other three subregions did not result in statistical significance (≡¥¢╜^ = -.0012,
+[411] SE = .0012, t(53) = -1.04, p = .304). The other two contrasts indicated differences between the
+[412] performances of CM and the average of SF and AStr (≡¥¢╜^ = .0036, SE = .0015, t(53) = 2.39, p =
+[413] .020), and between the SF and AStr (≡¥¢╜^ = .017, SE = .0026, t(53) = 6.47, p < .001). Post-hoc tests
+[414] indicated that there were differences between CM and AStr (≡¥¢╜^ = .027, SE = .0050, z = 5.45, p <
+[415] .001), SF and AStr (≡¥¢╜^ = .033, SE = .0050, z = 6.64, p < .001), SF and LB (≡¥¢╜^ = .018, SE = .0054,
+[416] z = 3.33, p = .005), LB and AStr (≡¥¢╜^ = .015, SE = .0054, z = 2.84, p = .023), but not between CM
+[418] and LB or between SF and CM. Thus, the sets of voxels for SF and CM exhibited the highest
+[419] performance, followed by voxels for LB, and then the voxels for AStr.
+[423] Figure 3. ANN-based encoding models predict human amygdala responses to naturalistic videos.
+[424] a) Amygdala activation is predicted by encoding models fit on naturalistic videos (group t-statistic computed on the cross-validated correlation between predicted and observed BOLD responses). Maps are displayed with a threshold of qFDR < .05. b) Rendering of amygdala parcellation (Julich-Brain Cytoarchitectonic Atlas). Blue, LB: laterobasal; yellow, SF: superficial; Orange, CM: centromedial; green, AStr: amygdalostriatal. (c) Violin plots of average predictive performance of encoding models in each subregion. Each point corresponds to a single subject (N = 20). Error bars reflect standard error of the mean. *p < .05, ** p < .01, *** qFDR < .05
+[425] Predicting the response of amygdala-based models along dimensions of valence and arousal
+[426] We validated our encoding models on images from the IAPS and OASIS datasets that
+[428] have been shown to produce increases in amygdala activity (Britton et al., 2006; Haj-Ali et al.,
+[430] 2020; Hartling et al., 2021) along the dimensions of valence (Garavan et al., 2001; Anders et al.,
+[432] 2004, 2008; Mather et al., 2004; Aldhafeeri et al., 2012; Styliadis et al., 2014) and arousal in
+[434] humans (Canli et al., 2000; Kensinger and Schacter, 2006). Consistent with previous fMRI
+[436] studies that show increased amygdala responses to positively valent stimuli, we found that the
+[437] amygdala encoding model captured linear increases in valence (≡¥¢╜^ = .0095, t(19) = 3.13, p = .006,
+[438] d = 0.70; Figure 4). Encoding model responses did not track arousal (≡¥¢╜^ = .0006, t(19) = 0.18, p =
+[440] .861, d = 0.04) or the interaction between valence and arousal (≡¥¢╜^ = -.0034, t(19) = -1.48, p =
+[441] .155, d = -0.33). Moreover, we found that the amount of red color (≡¥¢╜^ = .0073, t(19) = 2.24, p =
+[442] .037, d = 0.50) and high frequency spatial power (≡¥¢╜^ = .0211, t(19) = 2.96, p = .008, d = 0.66)
+[444] within images also predicted activations in amygdala models.
+[445] Given recent findings from multivariate decoding studies demonstrating that the
+[446] amygdala encodes valence along a single dimension that ranges from unpleasantness to
+[448] pleasantness (Jin et al., 2015; Tiedemann et al., 2020), we performed a series of regressions
+[450] examining associations with valence separately for negative (z < 0), neutral (absolute value of z
+[452] < 1), and positive (z > 1) images. If the amygdala encoding model predicts valence across the
+[454] full valence spectrum using a single continuous representation, then we would expect all three
+[458] Figure 4. Amygdala encoding model responses to images from the standardized affective images. The predicted response to images from the International Affective Picture System (IAPS) and the Open Affective Standardized Image Set (OASIS). Predictions were generated from regression models predicting encoding model responses based on valence, arousal, the interaction between valence and arousal. Surface plots show responses averaged across the entire amygdala, visual cortex, and within amygdala subregions.
+[460] regressions to exhibit a positive relationship. Alternatively, the amygdala may encode coarse-
+[462] grained differences in valence extremes using a discontinuous function, consistent with bivalent
+[464] models of affect (Bradburn, 1969; Watson and Tellegen, 1985; Cacioppo et al., 2012; Mattek et
+[466] al., 2017).
+[468] Consistent with the latter hypothesis, we found amygdala encoding models respond to
+[470] valence in a piecewise, discontinuous manner. Increasingly negative images produced greater
+[471] activations in the encoding model (≡¥¢╜^ = -.0140, t(19) = -2.59, p = .018, d = -0.58). Valence coding
+[472] shifted within the neutral range, as more positive images produced greater activations (≡¥¢╜^ = .0187,
+[474] t(19) = 4.37, p < .001, d = 0.98). This coding continued for more extreme positive images, as
+[475] they produced greater activations in the encoding model (≡¥¢╜^ = .0126, t(19) = 2.46, p = .024, d =
+[477] 0.55). These results suggest that the encoding model captures coarse-grained differences between
+[479] valence extremes and also a more fine-grained, nonlinear representation of valence.
+[481] As our overarching hypothesis is that the amygdala functions to select among many
+[483] possible behaviorally relevant sensory features, we next examined whether affective variables
+[485] encoded in the activity of the visual cortex differed from those of amygdala responses.
+[487] Examining relationships between visual cortex encoding model predictions and normative
+[488] affective variables, we found a positive association with valence (≡¥¢╜^ = .0188, t(19) = 5.06, p <
+[489] .001, d = 1.13) and arousal (≡¥¢╜^ = .0104, t(19) = 2.74, p = .013, d = 0.61), and a significant
+[490] interaction (≡¥¢╜^ = -.025, t(19) = -8.05, p < .001, d = -1.80), such that the encoding model
+[492] responded more with increasing arousal for negative compared to positive stimuli. These results
+[494] are broadly consistent with data showing that amygdala feedback modulates early visual
+[496] responses (Liu et al., 2022) and that visual cortex encodes representations of multiple affective
+[498] variables (Miskovic and Anderson, 2018; Kragel et al., 2019; Li et al., 2019; Bo et al., 2021).
+[500] To evaluate whether amygdala and visual cortex encoding of affective variables differed,
+[502] we compared the strength of associations between regions. The amygdala encoding models had
+[503] weaker associations with both valence (≡¥¢╜^ = -.009, t(19) = -2.19, p = .041, d = -0.49) and arousal
+[504] (≡¥¢╜^ = -.010, t(19) = -2.25, p = .036, d = -0.50) compared to visual cortex models. Similarly, the
+[506] amygdala models exhibited a weaker (less negative) interaction between valence and arousal
+[507] compared to the visual cortex encoding models (≡¥¢╜^ = .0218, t(19) = 6.10 , p < .001, d = 1.36).
+[509] Given the functional heterogeneity of the amygdala and past evidence demonstrating
+[511] interactions between valence and arousal (Winston et al., 2005), we next tested whether there
+[513] were differences in the encoding of valence and its interaction with arousal in amygdala
+[515] subregions. To this end, we fit separate encoding models for each amygdala subregion. We
+[517] performed ANOVAs comparing activations between subregions and found that responses related
+[519] to valence did not differ across subregions (F(1,19) = 3.95, p = .062), whereas the interaction
+[521] between valence and arousal varied across subregions (F(1,19) = 7.45, p = .013). Exploratory
+[523] post-hoc tests did not reveal any significant effects after correcting for multiple comparisons,
+[524] although AStr and LB demonstrated a difference with a modest effect size (≡¥¢╜^= 0.0045, SE =
+[526] .0023, p = .254, 95% CI = [-.0021, .0111], d = -.429; Table 1).
+[528] Table 1. Effects of valence and arousal on amygdala subregions. LB: laterobasal; SF: superficial; CM:
+[529] centromedial; AStr: amygdalostriatal.
+[531] Controlling encoding models of distinct
+[533] amygdala subregions
+[535] To further evaluate regional specificity,
+[537] we generated artificial stimuli optimized to
+[539] activate anatomically defined amygdala
+[541] subregions (i.e., LB, SF, AStr, and CM
+[542] amygdala; Figure 5). We then compared the
+[543] activity produced by on- vs. off-target artificial
+[544] stimuli within the respective encoding models.
+[545] This analysis revealed that artificial stimuli
+[547] selectively engaged on-target subregions
+[548] compared to off-target subregions (AStr: ≡¥¢╜^ =
+[549] .026, t(19) = 4.63, p < .001, d = 1.04; CM: ≡¥¢╜^ =
+[550] .031, t(19) = 5.89, p < .001, d = 1.32; LB: ≡¥¢╜^ =
+[552] .009, t(19) = 2.22, p = .039, d = 0.50), with the
+[553] exception of SF (≡¥¢╜^ = .023, t(19) = 1.31, p =
+[555] .205, d = 0.29). A supervised classification
+[557] analysis revealed all image types were distinct
+[559] from one another in pairwise comparisons, with
+[561] the exception of the artificial stimuli generated
+[563] to target the LB and SF subregions. The six
+[565] distinct image clusters could be discriminated
+[567] from one another in a 6-way classification with
+[570] Figure 5. Representative artificial stimuli for each target region. LB: laterobasal; SF: superficial; CM: centromedial; AStr: amygdalostriatal; sub: subject.
+[572] 71.7 ┬▒ 1.7% (SE) accuracy (chance accuracy = 21.96 ┬▒ 16.4%), demonstrating a high degree of
+[574] functional specialization (Figure 6).
+[576] Discussion
+[578] We found that amygdala processing can be characterized using a systems identification
+[580] framework. Encoding models using features from deep convolutional neural predicted BOLD
+[582] activity within multiple amygdala nuclei during free viewing of a cinematic film. In independent
+[584] validation tests, the amygdala encoding model consistently responded to differences in valence
+[586] and its interaction with arousal, the amount of red color, and high spatial frequency power of
+[588] affective images, consistent with prior work investigating amygdala responses to these stimuli
+[589] (Garavan et al., 2001; Anders et al., 2004, 2008; Styliadis et al., 2014). Furthermore, stimuli
+[590] synthesized to engage amygdala subregions were visually distinct, alluding to differences in the
+[591] specialization of amygdala subregions. We take these findings to show that one function of the
+[592] amygdala is to transform sensory inputs from the ventral visual stream to produce
+[593] representations related to valence.
+[594] Our findings demonstrate how encoding models can be used to characterize the interface
+[595] between sensory pathways and downstream regions involved in cognition and emotion. A large
+[597] body of work has used hand-engineered (Jones and Palmer, 1987; Lee, 1996; Dumoulin and
+[599] Wandell, 2008) and data-driven (Fukushima, 1988; Riesenhuber and Poggio, 1999) features to
+[601] characterize the primate visual system. Deep convolutional neural networks have been developed
+[603] as models of the ventral visual streamΓÇöproviding a better match to the complexity of biological
+[605] systems underlying perception (Yamins and DiCarlo, 2016; Kar et al., 2019). The existing
+[607] literature work has generally focused on identifying the best one-to-one mappings between
+[609] specific features and the responses of distinct visual areas to carefully controlled stimuli, with the
+[613] Figure 6. ANN-generated stimuli selectively engage encoding models of different regions of interest.
+[614] a) t-SNE plot, b) optimal clustering solution, and c) normalized confusion matrix of predicted activations of stimuli in encoding models color-coded by region of interest. Confusion matrix shows above chance performance. amy: whole amygdala; IT: inferotemporal cortex; VC: visual cortex; AStr: amygdalostriatal transition zone; CM: centromedial amygdala; LB: laterobasal amygdala; SF: superficial amygdala.
+[615] goal of identifying a fully mappable model of the visual system (Yamins and DiCarlo, 2016)
+[617] ranging from the retina to the anterior temporal lobe. Here we explored mappings that diverge
+[618] from ventral stream involvement in visual recognition to characterize a system central to
+[619] emotional behavior, the amygdaloid complex (OΓÇÖNeill et al., 2018).
+[620] Characterizing amygdala function using an encoding model framework is a departure
+[621] from common methods that involve measuring amygdala responses to one or a few variables at a
+[622] time (Garavan et al., 2001; Anderson et al., 2003; Anders et al., 2004, 2008; Kensinger and
+[624] Schacter, 2006; Styliadis et al., 2014; Jin et al., 2015; Haj-Ali et al., 2020; Tiedemann et al.,
+[626] 2020). Whereas conventional studies are built upon well-founded assumptions that the amygdala
+[628] is involved in processing specific variables such as threat, reward, pleasure, and intensity, among
+[630] others, we relaxed these constraints and predicted that amygdala responses can be approximated
+[632] as an image-computable function of signals present in the sensory array. Thus, although we did
+[634] not assume any specific variable was encoded in amygdala activity, we found that amygdala
+[636] encoding models were sensitive to variation in the normative valence and arousal evoked by
+[638] images.
+[640] In line with our observation that the average response of the amygdala encoding model
+[642] increased from negative to positive extremes of the valence continuum, recent multivariate
+[643] decoding studies have shown that the amygdala unidimensionally represents the valence of odors
+[644] (Jin et al., 2015) and images of food (Tiedemann et al., 2020). Together, these findings are
+[645] broadly consistent with studies reporting the amygdala is involved in reward learning and
+[646] evaluating social images (Baxter and Murray, 2002; Adolphs and Spezio, 2006). They are also
+[647] congruent with work in nonhuman primates showing that both pleasant and unpleasant stimuli
+[648] engage distributed neural populations in the amygdala (Paton et al., 2006; Belova et al., 2008),
+[650] and with fMRI evidence showing that the amygdala participates in a distributed network of brain
+[652] regions sensitive to fluctuations in hedonic valence (Kragel et al., 2023).
+[654] In addition to variation related to valence extremes, we observed nonlinearities in
+[656] encoding model responses to affective images, such that responses were greater for highly valent
+[658] compared to neutral stimuli. This pattern of results has been observed in response to olfactory
+[660] (Winston et al., 2005) and auditory (Fecteau et al., 2007) stimulation. Whereas unidimensional
+[662] coding of valence was widespread throughout the amygdala, we found this interactive effect
+[664] modestly differed across amygdala subregions, with the largest effect in the amygdalostriatal
+[666] transition area, a region that encodes the valence of threatening stimuli and is important for the
+[668] expression of conditioned defensive behavior in nonhuman animal models (Goto et al., 2022;
+[670] Mills et al., 2022). It is possible that overlapping neural populations in the amygdala relate to
+[672] valence in different ways, based on contextual factors that influence connectivity with distributed
+[674] brain networks (Gothard, 2020). For instance, one recent study (─îeko et al., 2022) identified
+[676] representations of negative affect from different sensory origins (visually evoked and domain-
+[678] general across somatic, thermal, visual, and auditory sources) and non-specific arousal that were
+[680] distributed across brain systems, yet overlapped in the amygdala. The amygdala activity captured
+[682] by our encoding models could reflect visual-specific or domain-general coding of affect;
+[683] adjudicating between these alternatives requires further study.
+[684] We found that stimuli generated to selectively engage amygdala subregions were
+[685] clustered such that stimuli generated to engage the input centers of the amygdala (such as the
+[686] LB) were distinct from output centers of the amygdala (such as the CM and AStr). This result is
+[687] broadly consistent with models of amygdala processing that suggest the amygdala identifies a
+[688] subsets of sensory variables that are relevant for learning and motivating behavior (Pessoa, 2010;
+[690] Sladky et al., 2024). However, the overall distinctiveness of synthetic stimuli raises other
+[692] possibilities. Differences in synthetic stimuli could result from local processing within the
+[694] amygdala or connections to the amygdala bypass the laterobasal complex and directly influence
+[696] population activity.
+[698] Despite exhibiting large effect sizes, voxel-wise predictions were far from explaining all
+[700] amygdala activity. This is perhaps unsurprising, given the complexity of the movie stimulus and
+[702] the relative simplicity of the encoding model used. As we developed encoding models using
+[704] static visual features useful for classifying emotional scenes, amygdala responses to emotional
+[706] stimuli from other sensory modalities (e.g., auditory and linguistic signals), those that habituated
+[708] over time, or were dependent on learning taking place over the course of the movie stimulus
+[710] could not be predicted using our approach. We anticipate that amygdala responses influenced by
+[712] these factors can be characterized using similar approaches, given connections between the
+[714] amygdala and brain regions involved in reinforcement learning, audition, and language (Price,
+[716] 2003; Koelsch et al., 2013; Abivardi and Bach, 2017), and the success of computational models
+[718] in characterizing the function of these systems (Yamins and DiCarlo, 2016; Cross et al., 2021).
+[720] Amygdala encoding models were trained on the visual input of one full-length motion
+[721] picture film, 500 Days of Summer, and on the corresponding brain data of 20 subjects viewing
+[722] this movie. This full-length movie is sufficiently complex with both positive and negative
+[723] valence scenes, faces, and other visual content, although it may have been limited in its ability to
+[724] evoke robust and varied emotional experiences, including acute fear (Hudson et al., 2020).
+[725] Future studies using different movies, videos, or other dynamic visual stimuli to train encoding
+[726] models are needed to identify the set of variables encoded by the amygdala, and to assess the
+[727] extent to which they are context dependent or generalize across stimulus types (─îeko et al.,
+[729] 2022) and situations (Kragel et al., 2023).
+[731] In conclusion, our study shows that the amygdala encodes multiple features of visual
+[733] stimuli, ranging from low-level features such as color and spectral power to more complex
+[735] features along the dimension of valence, with marked differences between the features that
+[737] individual amygdala subregions represent. Thus, perhaps what is driving the amygdala can be
+[739] thought of as something beyond a single dimension or a handful of constructs, but rather a large
+[741] array of features yet to be identified and objectively examined to understand how the amygdala
+[743] coordinates emotional behavior.
+[745] References
+[747] Abivardi A, Bach DR (2017) Deconstructing white matter connectivity of human amygdala
+[749] nuclei with thalamus and cortex subdivisions in vivo. Hum Brain Mapp 38:3927ΓÇô3940.
+[751] Adolphs R, Spezio M (2006) Role of the amygdala in processing visual social stimuli. Prog
+[753] 5	Brain Res 156:363ΓÇô378.
+[755] Aldhafeeri FM, Mackenzie I, Kay T, Alghamdi J, Sluming V (2012) Regional brain responses to
+[757] pleasant and unpleasant IAPS pictures: Different networks. Neuroscience Letters 512:94ΓÇô
+[759] 98.
+[761] Aliko S, Huang J, Gheorghiu F, Meliss S, Skipper JI (2020) A naturalistic neuroimaging
+[762] database for understanding the brain using ecological stimuli. Sci Data 7:347.
+[764] Amaral DG, Price JL (1984) Amygdalo-cortical projections in the monkey (Macaca fascicularis).
+[766] Journal of Comparative Neurology 230:465ΓÇô496.
+[768] Amunts K, Kedo O, Kindler M, Pieperhoff P, Mohlberg H, Shah NJ, Habel U, Schneider F,
+[770] Zilles K (2005) Cytoarchitectonic mapping of the human amygdala, hippocampal region
+[772] and entorhinal cortex: intersubject variability and probability maps. Anat Embryol
+[774] 210:343ΓÇô352.
+[776] Anders S, Eippert F, Weiskopf N, Veit R (2008) The human amygdala is sensitive to the valence
+[778] of pictures and sounds irrespective of arousal: an fMRI study. Soc Cogn Affect Neurosci
+[780] 3:233ΓÇô243.
+[782] Anders S, Lotze M, Erb M, Grodd W, Birbaumer N (2004) Brain activity underlying emotional
+[784] valence and arousal: A responseΓÇÉrelated fMRI study. Hum Brain Mapp 23:200ΓÇô209.
+[786] Anderson AK, Christoff K, Stappen I, Panitz D, Ghahremani DG, Glover G, Gabrieli JDE, Sobel
+[788] N (2003) Dissociated neural representations of intensity and valence in human olfaction.
+[790] Nat Neurosci 6:196ΓÇô202.
+[792] Bashivan P, Kar K, DiCarlo JJ (2019) Neural population control via deep image synthesis.
+[794] Science 364:eaav9436.
+[796] Baxter MG, Murray EA (2002) The amygdala and reward. Nat Rev Neurosci 3:563ΓÇô573.
+[798] Belova MA, Paton JJ, Salzman CD (2008) Moment-to-Moment Tracking of State Value in the
+[800] Amygdala. J Neurosci 28:10023ΓÇô10030.
+[802] Berridge KC (2019) Affective valence in the brain: modules or modes? Nat Rev Neurosci
+[803] 12	20:225ΓÇô234.
+[805] Bo K, Yin S, Liu Y, Hu Z, Meyyappan S, Kim S, Keil A, Ding M (2021) Decoding Neural
+[806] Representations of Affective Scenes in Retinotopic Visual Cortex. Cereb Cortex
+[808] 31:3047ΓÇô3063.
+[810] Bonnet L, Comte A, Tatu L, Millot J, Moulin T, Medeiros de Bustos E (2015) The role of the
+[812] amygdala in the perception of positive emotions: an ΓÇ£intensity detector.ΓÇ¥ Front Behav
+[814] Neurosci 9 Available at: https://www.frontiersin.org/articles/10.3389/fnbeh.2015.00178
+[816] [Accessed March 29, 2024].
+[818] Bradburn NM (1969) The structure of psychological well-being. Oxford, England: Aldine.
+[820] Bradley MM, Lang PJ (2007) The International Affective Picture System (IAPS) in the study of
+[822] emotion and attention. In: Handbook of emotion elicitation and assessment, pp 29ΓÇô46
+[824] Series in affective science. New York, NY, US: Oxford University Press.
+[826] Britton JC, Taylor SF, Sudheimer KD, Liberzon I (2006) Facial expressions and complex IAPS
+[828] pictures: Common and differential networks. NeuroImage 31:906ΓÇô919.
+[830] Cacioppo J, Berntson G, Norris C, Gollan J (2012) The Evaluative Space Model. In: Handbook
+[832] of Theories of Social Psychology: Volume 1, pp 50ΓÇô72.
+[834] Canli T, Zhao Z, Brewer J, Gabrieli JD, Cahill L (2000) Event-related activation in the human
+[836] amygdala associates with later memory for individual emotional experience. J Neurosci
+[838] 20:RC99.
+[840] ─îeko M, Kragel PA, Woo C-W, L├│pez-Sol├á M, Wager TD (2022) Common and stimulus-type-
+[841] specific brain representations of negative affect. Nat Neurosci 25:760ΓÇô770.
+[843] Costafreda SG, Brammer MJ, David AS, Fu CHY (2008) Predictors of amygdala activation
+[844] during the processing of emotional stimuli: A meta-analysis of 385 PET and fMRI
+[846] studies. Brain Research Reviews 58:57ΓÇô70.
+[848] Cross L, Cockburn J, Yue Y, OΓÇÖDoherty JP (2021) Using deep reinforcement learning to reveal
+[850] how the brain encodes abstract state-space representations in high-dimensional
+[852] environments. Neuron 109:724-738.e7.
+[854] Cunningham WA, Brosch T (2012) Motivational Salience: Amygdala Tuning From Traits,
+[856] Needs, Values, and Goals. Current Directions in Psychological Science 21:54ΓÇô59.
+[858] 1	Dumoulin SO, Wandell BA (2008) Population receptive field estimates in human visual cortex.
+[860] 2	Neuroimage 39:647ΓÇô660.
+[862] Fecteau S, Belin P, Joanette Y, Armony JL (2007) Amygdala responses to nonlinguistic
+[864] emotional vocalizations. Neuroimage 36:480ΓÇô487.
+[866] Friston KJ (2007) Statistical parametric mapping: the analysis of functional brain images, 1st ed.
+[868] Amsterdam Boston: Elsevier / Academic Press.
+[870] Fukushima K (1988) Neocognitron: A hierarchical neural network capable of visual pattern
+[872] recognition. Neural Networks 1:119ΓÇô130.
+[874] Garavan H, Pendergrass JC, Ross TJ, Stein EA, Risinger RC (2001) Amygdala response to both
+[876] positively and negatively valenced stimuli. Neuroreport 12:2779ΓÇô2783.
+[878] Glasser MF, Coalson TS, Robinson EC, Hacker CD, Harwell J, Yacoub E, Ugurbil K, Andersson
+[879] J, Beckmann CF, Jenkinson M, Smith SM, Van Essen DC (2016) A multi-modal
+[880] parcellation of human cerebral cortex. Nature 536:171ΓÇô178.
+[882] Gothard KM (2020) Multidimensional processing in the amygdala. Nat Rev Neurosci 21:565ΓÇô
+[884] 15	575.
+[886] Goto F, Kiyama Y, Ogawa I, Okuno H, Ichise T, Ichise H, Anai M, Kodama T, Yoshida N, Bito
+[888] H, Manabe T (2022) Gastrin-releasing peptide regulates fear learning under stressed
+[890] conditions via activation of the amygdalostriatal transition area. Mol Psychiatry 27:1694ΓÇô
+[892] 1703.
+[894] Haj-Ali H, Anderson AK, Kron A (2020) Comparing three models of arousal in the human brain.
+[896] Soc Cogn Affect Neurosci 15:1ΓÇô11.
+[898] Hartling C, Metz S, Pehrs C, Scheidegger M, Gruzman R, Keicher C, Wunder A, Weigand A,
+[900] Grimm S (2021) Comparison of Four fMRI Paradigms Probing Emotion Processing.
+[902] Brain Sci 11:525.
+[904] Horikawa T, Kamitani Y (2017) Generic decoding of seen and imagined objects using
+[906] hierarchical visual features. Nat Commun 8:15037.
+[908] Hudson M, Sepp├ñl├ñ K, Putkinen V, Sun L, Glerean E, Karjalainen T, Karlsson HK, Hirvonen J,
+[910] Nummenmaa L (2020) Dissociable neural systems for unconditioned acute and sustained
+[912] fear. NeuroImage 216:116522.
+[914] Janak PH, Tye KM (2015) From circuits to behaviour in the amygdala. Nature 517:284ΓÇô292.
+[916] Jin J, Zelano C, Gottfried JA, Mohanty A (2015) Human Amygdala Represents the Complete
+[917] Spectrum of Subjective Valence. J Neurosci 35:15145ΓÇô15156.
+[919] Jones JP, Palmer LA (1987) An evaluation of the two-dimensional Gabor filter model of simple
+[921] receptive fields in cat striate cortex. J Neurophysiol 58:1233ΓÇô1258.
+[923] Kar K, Kubilius J, Schmidt K, Issa EB, DiCarlo JJ (2019) Evidence that recurrent circuits are
+[925] critical to the ventral streamΓÇÖs execution of core object recognition behavior. Nat
+[927] Neurosci 22:974ΓÇô983.
+[929] Kensinger EA, Schacter DL (2006) Processing emotional pictures and words: effects of valence
+[931] and arousal. Cogn Affect Behav Neurosci 6:110ΓÇô126.
+[933] Koelsch S, Skouras S, Fritz T, Herrera P, Bonhage C, K├╝ssner MB, Jacobs AM (2013) The roles
+[935] of superficial amygdala and auditory cortex in music-evoked fear and joy. NeuroImage
+[937] 81:49ΓÇô60.
+[939] Kragel PA, LaBar KS (2016) Decoding the Nature of Emotion in the Brain. Trends Cogn Sci
+[941] 5	20:444ΓÇô455.
+[943] Kragel PA, Reddan MC, LaBar KS, Wager TD (2019) Emotion schemas are embedded in the
+[945] human visual system. Sci Adv 5:eaaw4358.
+[947] Kragel PA, Treadway MT, Admon R, Pizzagalli DA, Hahn EC (2023) A mesocorticolimbic
+[949] signature of pleasure in the human brain. Nat Hum Behav 7:1332ΓÇô1343.
+[951] Kravitz DJ, Saleem KS, Baker CI, Ungerleider LG, Mishkin M (2013) The ventral visual
+[952] pathway: An expanded neural framework for the processing of object quality. Trends
+[953] Cogn Sci 17:26ΓÇô49.
+[955] Krizhevsky A, Sutskever I, Hinton GE (2012) ImageNet Classification with Deep Convolutional
+[956] Neural Networks. In: Advances in Neural Information Processing Systems. Curran
+[957] Associates, Inc. Available at:
+[959] https://proceedings.neurips.cc/paper_files/paper/2012/hash/c399862d3b9d6b76c8436e92
+[961] 4a68c45b-Abstract.html [Accessed May 13, 2024].
+[963] Kurdi B, Lozano S, Banaji MR (2017) Introducing the Open Affective Standardized Image Set
+[965] 19	(OASIS). Behav Res 49:457ΓÇô470.
+[967] Lee TS (1996) Image representation using 2D Gabor wavelets. IEEE Transactions on Pattern
+[969] Analysis and Machine Intelligence 18:959ΓÇô971.
+[971] Li Z, Yan A, Guo K, Li W (2019) Fear-Related Signals in the Primary Visual Cortex. Curr Biol
+[973] 4	29:4078-4083.e2.
+[975] Lindquist KA, Satpute AB, Wager TD, Weber J, Barrett LF (2016) The Brain Basis of Positive
+[977] and Negative Affect: Evidence from a Meta-Analysis of the Human Neuroimaging
+[979] Literature. Cerebral Cortex 26:1910ΓÇô1922.
+[981] Lindquist KA, Wager TD, Kober H, Bliss-Moreau E, Barrett LF (2012) The brain basis of
+[983] emotion: A meta-analytic review. Behav Brain Sci 35:121ΓÇô143.
+[985] Liu TT, Fu JZ, Chai Y, Japee S, Chen G, Ungerleider LG, Merriam EP (2022) Layer-specific,
+[986] retinotopically-diffuse modulation in human visual cortex in response to viewing
+[987] emotionally expressive faces. Nat Commun 13:6302.
+[989] Maaten L van der, Hinton G (2008) Visualizing Data using t-SNE. Journal of Machine Learning
+[990] 14	Research 9:2579ΓÇô2605.
+[992] Mather M, Canli T, English T, Whitfield S, Wais P, Ochsner K, Gabrieli JDE, Carstensen LL
+[994] (2004) Amygdala responses to emotionally valenced stimuli in older and younger adults.
+[996] Psychol Sci 15:259ΓÇô263.
+[998] Mattek AM, Wolford GL, Whalen PJ (2017) A Mathematical Model Captures the Structure of
+[1000] Subjective Affect. Perspect Psychol Sci 12:508ΓÇô526.
+[1002] 1	McDonald AJ (1998) Cortical pathways to the mammalian amygdala. Progress in Neurobiology
+[1004] 2	55:257ΓÇô332.
+[1006] Mills F et al. (2022) Amygdalostriatal transition zone neurons encode sustained valence to direct
+[1008] conditioned behaviors. :2022.10.28.514263 Available at:
+[1010] https://www.biorxiv.org/content/10.1101/2022.10.28.514263v1 [Accessed July 21,
+[1012] 2023].
+[1014] Miskovic V, Anderson A (2018) Modality general and modality specific coding of hedonic
+[1016] valence. Curr Opin Behav Sci 19:91ΓÇô97.
+[1018] Murray EA, Wise SP (2004) What, if anything, is the medial temporal lobe, and how can the
+[1020] amygdala be part of it if there is no such thing? Neurobiology of Learning and Memory
+[1021] 82:178ΓÇô198.
+[1023] Naselaris T, Kay KN, Nishimoto S, Gallant JL (2011) Encoding and decoding in fMRI.
+[1024] 13	Neuroimage 56:400ΓÇô410.
+[1026] Nguyen A, Dosovitskiy A, Yosinski J, Brox T, Clune J (2016) Synthesizing the preferred inputs
+[1028] for neurons in neural networks via deep generator networks. Available at:
+[1030] http://arxiv.org/abs/1605.09304 [Accessed October 24, 2022].
+[1032] OΓÇÖNeill P-K, Gore F, Salzman CD (2018) Basolateral amygdala circuitry in positive and
+[1034] negative valence. Current Opinion in Neurobiology 49:175ΓÇô183.
+[1036] Paton JJ, Belova MA, Morrison SE, Salzman CD (2006) The primate amygdala represents the
+[1038] positive and negative value of visual stimuli during learning. Nature 439:865.
+[1040] Pessoa L (2010) Emotion and Cognition and the Amygdala: From ΓÇ£what is it?ΓÇ¥ to ΓÇ£whatΓÇÖs to be
+[1042] done?ΓÇ¥ Neuropsychologia 48:3416ΓÇô3429.
+[1044] Pessoa L, Adolphs R (2010) Emotion processing and the amygdala: from a ΓÇÿlow roadΓÇÖ to ΓÇÿmany
+[1046] roadsΓÇÖ of evaluating biological significance. Nat Rev Neurosci 11:773ΓÇô783.
+[1048] Price JL (2003) Comparative aspects of amygdala connectivity. Ann N Y Acad Sci 985:50ΓÇô58.
+[1050] Riesenhuber M, Poggio T (1999) Hierarchical models of object recognition in cortex. Nat
+[1052] 7	Neurosci 2:1019ΓÇô1025.
+[1054] Sah P, Faber ESL, Lopez De Armentia M, Power J (2003) The Amygdaloid Complex: Anatomy
+[1056] and Physiology. Physiological Reviews 83:803ΓÇô834.
+[1058] Sander D, Grafman J, Zalla T (2003) The human amygdala: an evolved system for relevance
+[1059] detection. Rev Neurosci 14:303ΓÇô316.
+[1061] Sladky R, Kargl D, Haubensak W, Lamm C (2024) An active inference perspective for the
+[1062] amygdala complex. Trends in Cognitive Sciences 28:223ΓÇô236.
+[1064] Soderberg K, Jang G, Kragel P (2023) Sensory encoding of emotion conveyed by the face and
+[1066] visual context. Available at: http://biorxiv.org/lookup/doi/10.1101/2023.11.20.567556
+[1068] [Accessed April 4, 2024].
+[1070] Styliadis C, Ioannides AA, Bamidis PD, Papadelis C (2014) Amygdala responses to Valence and
+[1072] its interaction by arousal revealed by MEG. Int J Psychophysiol 93:121ΓÇô133.
+[1074] Swanson LW, Petrovich GD (1998) What is the amygdala? Trends in Neurosciences 21:323ΓÇô
+[1076] 20	331.
+[1078] Tiedemann LJ, Alink A, Beck J, B├╝chel C, Brassen S (2020) Valence Encoding Signals in the
+[1080] Human Amygdala and the Willingness to Eat. J Neurosci 40:5264ΓÇô5272.
+[1082] Vytal K, Hamann S (2010) Neuroimaging support for discrete neural correlates of basic
+[1084] emotions: a voxel-based meta-analysis. J Cogn Neurosci 22:2864ΓÇô2885.
+[1086] Wang B, Ponce CR (2022) High-performance Evolutionary Algorithms for Online Neuron
+[1088] Control. In: Proceedings of the Genetic and Evolutionary Computation Conference, pp
+[1090] 1308ΓÇô1316 Available at: http://arxiv.org/abs/2204.06765 [Accessed May 12, 2023].
+[1092] Watson D, Tellegen A (1985) Toward a consensual structure of mood. Psychological Bulletin
+[1094] 9	98:219ΓÇô235.
+[1096] Winston JS, Gottfried JA, Kilner JM, Dolan RJ (2005) Integrated Neural Representations of
+[1097] Odor Intensity and Affective Valence in Human Amygdala. J Neurosci 25:8903ΓÇô8907.
+[1099] Wold S, Sj├╢str├╢m M, Eriksson L (2001) PLS-regression: a basic tool of chemometrics.
+[1100] Chemometrics and Intelligent Laboratory Systems 58:109ΓÇô130.
+[1102] Xiao W, Kreiman G (2020) XDream: Finding preferred stimuli for visual neurons using
+[1104] generative networks and gradient-free optimization. PLOS Computational Biology
+[1106] 16:e1007973.
+[1108] Yamins DLK, DiCarlo JJ (2016) Using goal-driven deep learning models to understand sensory
+[1110] cortex. Nat Neurosci 19:356ΓÇô365.
+[1112] 19
+[1114] Author Contributions
+[1116] Conceptualization, methodology, formal analysis, writing, validation, and visualization, PAK;
+[1118] conceptualization, formal analysis, writing, and visualization, GJ.
+[1120] 4
+[1122] Data Availability
+[1124] The fMRI data used to fit encoding models is available at
+[1126] https://openneuro.org/datasets/ds002837/versions/2.0.0. Data used for fine-tuning EmoNet are
+[1128] available upon request from https://goo.gl/forms/XErJw9sBeyuOyp5Q2. Other data relevant to
+[1130] this project is available at https://osf.io/r48gc/.
+[1132] 10
+[1134] Code Availability
+[1135] Code for all analyses will be made available upon publication at GitHub at
+[1137] https://github.com/ecco-laboratory/AMOD. The code used for implementing EmoNet in Python
+[1139] is available at https://github.com/ecco-laboratory/emonet-pytorch.

@@ -1,25 +1,28 @@
 """
-Predict activations for artificial stimuli from encoding models.
+Artificial Stimulus Prediction
+==============================
 
-This module corresponds to AMOD script(s):
-  - predict_activations_artificial_stim_amygdala.m
-  - predict_activations_artificial_stim_subregion.m
-  - decode_activation_targets_artificial_stim.m
-  - decode_activation_targets_random_subregions.m
-Key matched choices:
-  - Same prediction formula: [ones(N,1) acts] * betas
-  - Artificial stim fc7 activations extracted from generated images
-  - For decoding: PLS classifier with leave-one-subject-out CV
-    plsregress(enc_prediction(train,:), Y(train,:), 7)
-    yhat = [ones(N_test,1) enc_prediction(test,:)] * b
-  - Accuracy = mean(pred_cat == true_cat)
-  - t-SNE visualization of predicted activations
-Assumptions / deviations:
-  - MATLAB uses activations(netTransfer, img, 'fc7') on generated images;
-    we assume fc7 features are pre-computed
-  - Decoding uses PLS with 7 components (different from encoding's 20)
-  - Random subregion decoding: 1000 iterations with random voxel splits
-  - TODO: integrate with actual image generation (requires emonet-pytorch)
+Predicts and decodes activations for DNN-generated artificial stimuli.
+
+Core Algorithm::
+
+    1. Load fc7 activations for each generated image
+    2. Predict: enc_pred = [1, fc7] @ betas
+    3. Decode: PLS classifier with 7 components, leave-one-subject-out CV
+    4. Accuracy = mean(pred_category == true_category)
+    5. t-SNE visualisation of predicted activation space
+
+Design Principles:
+    - Same prediction formula as IAPS/OASIS: ``[ones(N,1), acts] * betas``
+    - Decoding PLS uses 7 components (different from encoding’s 20)
+    - Random subregion decoding: 1000 iterations with random voxel splits
+    - Assumes fc7 features are pre-computed (requires emonet-pytorch)
+
+MATLAB Correspondence:
+    - predict_activations_artificial_stim_amygdala.m
+    - predict_activations_artificial_stim_subregion.m
+    - decode_activation_targets_artificial_stim.m
+    - decode_activation_targets_random_subregions.m
 """
 
 from __future__ import annotations

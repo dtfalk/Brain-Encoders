@@ -1,19 +1,20 @@
 """
-ROI (Region of Interest) definition and masking — arbitrary mask-based, ROI-agnostic.
+ROI Masking
+===========
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m  (apply_mask with canlab2018 'Amy')
-  - develop_encoding_models_subregions.m  (apply_mask with canlab2018 subregion masks)
-  - compile_matrices.m  (excluded_voxels = masked_dat.removed_voxels)
-Key matched choices:
-  - Applies a binary NIfTI mask to 4D BOLD data
-  - Tracks 'removed_voxels' (voxels in mask that are zero/NaN in BOLD)
-  - Returns voxel × time matrix matching MATLAB's masked_dat.dat
-Assumptions / deviations:
-  - MATLAB uses CanlabCore atlas functions (load_atlas, select_atlas_subset);
-    we require a pre-made NIfTI mask instead (ROI-agnostic)
-  - User must provide mask in the same space as the BOLD data
-  - We use nilearn for resampling if mask resolution differs from BOLD
+Applies a binary NIfTI mask to 4-D BOLD data, producing a voxel × time
+matrix equivalent to MATLAB’s ``masked_dat.dat``.
+
+Design Principles:
+    - Any NIfTI binary mask works (amygdala, cortex, custom regions)
+    - Tracks ``removed_voxels`` (in-mask voxels that are zero/NaN in BOLD)
+    - Returns ``MaskedData`` dataclass with ``.data``, ``.voxel_indices``, etc.
+    - ``nilearn`` handles affine resampling when mask ≠ BOLD resolution
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``apply_mask()`` with canlab2018
+    - develop_encoding_models_subregions.m → same, subregion masks
+    - compile_matrices.m → ``excluded_voxels = masked_dat.removed_voxels``
 """
 
 from __future__ import annotations

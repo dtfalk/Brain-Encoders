@@ -1,20 +1,26 @@
 """
-Color and spatial frequency diagnostics for images.
+Colour and Spatial Frequency Diagnostics
+========================================
 
-This module corresponds to AMOD script(s):
-  - get_color_spectral_IAPS_OASIS.m
-  - get_color_spectral_artificial_stim.m
-Key matched choices:
-  - Extract median RGB histograms per image
-  - Compute spatial frequency via FFT: PSD = |fftshift(fft2(img))|^2
-  - Low frequency: spatial freq < 6 cycles/image (on 227×227 grid)
-  - High frequency: spatial freq > 24 cycles/image
-  - Image preprocessing: readAndPreprocessImage → 227×227 resize
-Assumptions / deviations:
-  - MATLAB readAndPreprocessImage resizes to 227×227 for EmoNet input
-  - We use PIL/scipy for image loading and FFT
-  - Frequency thresholds (6, 24) are in cycles per image (not per pixel)
-  - Results are saved as median across histogram bins for each channel
+Extracts low-level image features (colour histograms, spatial frequency
+power) used as confound regressors in the paper’s valence × arousal analyses.
+
+Core Algorithm::
+
+    1. Resize image to 227 × 227 (EmoNet input size)
+    2. Median RGB per channel
+    3. PSD = |fftshift(fft2(gray_img))|^2
+    4. Low freq: spatial freq < 6 cycles/image
+    5. High freq: spatial freq > 24 cycles/image
+
+Design Principles:
+    - Thresholds (6, 24) are in cycles per image, not per pixel
+    - PIL for image loading, scipy for FFT
+    - Results stored as median across histogram bins per channel
+
+MATLAB Correspondence:
+    - get_color_spectral_IAPS_OASIS.m → ``extract_color_spectral()``
+    - get_color_spectral_artificial_stim.m → same function
 """
 
 from __future__ import annotations

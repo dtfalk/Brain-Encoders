@@ -1,28 +1,32 @@
 """
-HRF (Hemodynamic Response Function) convolution matching MATLAB spm_hrf.
+HRF Convolution Engine
+======================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      for i = 1:size(features, 2)
-          tmp = conv(double(features(:,i)), spm_hrf(1));
-          conv_features(:,i) = tmp(:);
-      end
-      timematched_features = conv_features(1:size(masked_dat.dat,2), :);
-  - develop_encoding_models_subregions.m:
-      (same convolution but applied to raw features BEFORE resampling;
-       then result is resampled to BOLD length)
-Key matched choices:
-  - SPM canonical HRF: double-gamma function
-  - spm_hrf(1) evaluates at dt=1 second resolution
-  - Convolution is linear (numpy.convolve with mode='full')
-  - After convolution, truncate to first n_trs samples
-  - No temporal or dispersion derivatives used
-Assumptions / deviations:
-  - Our SPM HRF implementation follows the standard double-gamma parameterization
-  - Parameters: peak delay=6, undershoot delay=16, peak dispersion=1,
-    undershoot dispersion=1, peak-to-undershoot ratio=6, onset=0, length=32s
-  - These are the SPM12 defaults used by spm_hrf(dt)
-  - Verified against SPM12 source code
+Convolves stimulus features with the haemodynamic response function (HRF)
+to map neural-timescale predictors onto the sluggish BOLD signal.
+
+Core Algorithm:
+    For each feature column *j*::
+
+        conv_features[:, j] = numpy.convolve(features[:, j], hrf, mode='full')
+        conv_features = conv_features[:n_trs, :]   # truncate to BOLD length
+
+    This mirrors the MATLAB loop::
+
+        for i = 1:size(features, 2)
+            tmp = conv(double(features(:,i)), spm_hrf(1));
+            conv_features(:,i) = tmp(:);
+        end
+
+Design Principles:
+    - SPM canonical HRF: double-gamma (peak=6 s, undershoot=16 s, ratio=6)
+    - ``spm_hrf(1)`` evaluates at dt = 1 s resolution (SPM12 defaults)
+    - No temporal or dispersion derivatives are used
+    - Convolution order (before / after resampling) is config-driven
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``convolve_features_with_hrf()``
+    - develop_encoding_models_subregions.m → same function, different call order
 """
 
 from __future__ import annotations

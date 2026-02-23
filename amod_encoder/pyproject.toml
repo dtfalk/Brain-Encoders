@@ -32,18 +32,20 @@ dependencies = [
     "h5py>=3.9",
     "statsmodels>=0.14",
     "pydantic>=2.0",
-    "jsonschema>=4.0",
+    "matplotlib>=3.8",
+    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]
-gpu = ["torch>=2.0"]
+gpu = ["torch>=2.0", "timm>=1.0"]
+extractors = ["torch>=2.0", "timm>=1.0", "opencv-python>=4.8", "Pillow>=10.0"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1",
     "mypy>=1.5",
 ]
-all = ["amod-encoder[gpu,dev]"]
+all = ["amod-encoder[gpu,extractors,dev]"]
 
 [project.scripts]
 amod-encoder = "amod_encoder.cli.main:app"

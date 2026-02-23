@@ -1,0 +1,89 @@
+# ===========================================================================
+#  Brain-Encoders — Node Environment (4× NVIDIA L40S, 48 GB each)
+# ===========================================================================
+#
+#  Hardware target:
+#    - 4× NVIDIA L40S (Ada Lovelace, 48 GB VRAM each, 192 GB total)
+#    - 1 TB system RAM
+#    - CUDA 12.6 / sm_89
+#    - Slurm job scheduler
+#
+#  Usage:
+#    conda env create -f environment-node.yml
+#    conda activate brain-encoders-node
+#    pip install -e ".[all]"
+#
+#  Notes:
+#    - Matches node-reference-code superstition-sd env where possible
+#    - Stable PyTorch + CUDA 12.6 (L40S is well-supported)
+#    - Distributed training via torchrun --nproc_per_node=4
+#    - All neuroimaging + stats + plotting deps included
+#    - pynvml for GPU monitoring in Rich dashboard
+# ===========================================================================
+
+name: brain-encoders-node
+
+channels:
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  # ---------- Core Scientific Stack ----------
+  - numpy>=1.26
+  - scipy>=1.12
+  - pandas>=2.1
+  - matplotlib>=3.8
+  - seaborn>=0.13
+
+  # ---------- Neuroimaging ----------
+  - nibabel>=5.2
+  - nilearn>=0.10
+
+  # ---------- Stats (MATLAB-matching) ----------
+  - statsmodels>=0.14
+
+  # ---------- Rich Terminal Dashboard ----------
+  - rich>=13.0
+
+  # ---------- Media ----------
+  - ffmpeg>=6.0
+  - pillow>=10.0
+
+  # ---------- Pip-Only Packages ----------
+  - pip:
+    # -- PyTorch (L40S / CUDA 12.6 — stable) --
+    - --extra-index-url https://download.pytorch.org/whl/cu126
+    - torch>=2.5
+    - torchvision>=0.20
+
+    # -- Feature extraction (model-agnostic) --
+    - timm>=1.0
+    - transformers>=4.40
+    - opencv-python>=4.9
+
+    # -- Encoding pipeline core --
+    - scikit-learn>=1.4
+    - pyyaml>=6.0
+    - typer[all]>=0.9
+    - h5py>=3.10
+    - pydantic>=2.5
+    - jsonschema>=4.0
+
+    # -- Stats extras --
+    - pingouin>=0.5        # effect sizes, Bayesian t-tests
+
+    # -- GPU monitoring (Rich dashboard) --
+    - pynvml>=12.0
+
+    # -- Multi-GPU --
+    - accelerate>=0.30
+
+    # -- Dev / QA --
+    - pytest>=8.0
+    - pytest-cov>=4.0
+    - ruff>=0.4
+    - mypy>=1.8

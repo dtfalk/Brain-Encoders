@@ -1,18 +1,18 @@
 """
-fc7 feature loader from OSF .mat file.
+fc7 Feature Loader
+==================
 
-This module corresponds to AMOD script(s):
-  - extract_features.m  (saves video_imageFeatures to .mat)
-  - develop_encoding_models_amygdala.m  (loads 500_days_of_summer_fc7_features.mat)
-Key matched choices:
-  - Variable name in .mat is 'video_imageFeatures'
-  - Shape is (N_frames, 4096) where N_frames = number of sampled frames
-  - Features are extracted from every 5th frame using EmoNet fc7 layer
-  - lendelta = size(video_imageFeatures, 1) is the original frame count
-  - Data is loaded as float64 (MATLAB default)
-Assumptions / deviations:
-  - .mat file may be v7.3 (HDF5) or earlier; we handle both via h5py/scipy
-  - We do NOT re-extract features from video; we use the pre-computed .mat
+Loads pre-computed EmoNet fc7 features from the OSF ``.mat`` file.
+
+Design Principles:
+    - Variable name in ``.mat`` is ``video_imageFeatures``
+    - Shape: ``(N_frames, 4096)`` where frames are every-5th-frame samples
+    - Handles both MATLAB v7.3 (HDF5 via h5py) and earlier formats (scipy)
+    - Data is returned as float64 to match MATLAB default precision
+
+MATLAB Correspondence:
+    - extract_features.m → saves ``video_imageFeatures``
+    - develop_encoding_models_amygdala.m → ``load_fc7_features()``
 """
 
 from __future__ import annotations
@@ -67,9 +67,21 @@ def load_fc7_features(mat_path: Path) -> np.ndarray:
     if features.ndim != 2:
         raise ValueError(f"Expected 2D feature matrix, got shape {features.shape}")
 
-    # MATLAB convention: if features has more rows than columns, it's (frames, features)
-    # fc7 has 4096 features; frame count should be larger
-    if features.shape[1] > features.shape[0]:
+    # Determine correct orientation.
+    # fc7 has exactly 4096 features. If one dimension is 4096, use that as
+    # the feature axis. Otherwise fall back to assuming more rows than columns.
+    FC7_DIM = 4096
+    if features.shape[1] == FC7_DIM:
+        # Already (frames, 4096) — correct orientation
+        pass
+    elif features.shape[0] == FC7_DIM and features.shape[1] != FC7_DIM:
+        logger.warning(
+            "Feature matrix appears transposed (%s); transposing to (frames, features)",
+            features.shape,
+        )
+        features = features.T
+    elif features.shape[1] > features.shape[0]:
+        # Neither dimension is 4096 — fall back to heuristic
         logger.warning(
             "Feature matrix appears transposed (%s); transposing to (frames, features)",
             features.shape,

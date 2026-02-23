@@ -1,23 +1,29 @@
 """
-Predict activations for IAPS/OASIS images using fitted encoding models.
+IAPS / OASIS Prediction
+=======================
 
-This module corresponds to AMOD script(s):
-  - predict_activations_IAPS_OASIS.m
-Key matched choices:
-  - Load per-subject mean betas (CSV format: one column vector)
-  - For each IAPS/OASIS image: get fc7 activations → predict with betas
-  - enc_prediction = squeeze(acts(f,:)) * squeeze(betas(s,:,:))
-  - Also compute leave-one-subject-out average prediction:
-      enc_prediction_avg = squeeze(acts(f,:)) * squeeze(mean(betas(subj_inds ~= s,:,:)))
-  - Correlate predictions with valence and arousal
-  - Bin by arousal/valence deciles for Friedman test
-Assumptions / deviations:
-  - MATLAB uses EmoNet's fc7 activations for IAPS/OASIS images;
-    we assume these are pre-computed and provided as a matrix
-  - MATLAB loads valence/arousal from per-image .mat files;
-    we expect them in a CSV (IAPS_data_amygdala_z.csv / OASIS_data_amygdala_z.csv)
-  - The prediction formula: [ones(N,1), acts] * betas  (with intercept row 0)
-  - For multiple ROIs: betas has shape (N_subjects, D+1, N_rois)
+Predicts amygdala activations for standardised affective images using
+fitted encoding model betas.
+
+Core Algorithm::
+
+    For each image i, subject s:
+        enc_pred[i] = [1, fc7[i, :]] @ betas[s]
+
+    Leave-one-subject-out average prediction::
+
+        enc_pred_avg[i] = [1, fc7[i, :]] @ mean(betas[~s])
+
+    Correlate predictions with valence / arousal ratings.
+
+Design Principles:
+    - Betas loaded from saved ``(D+1, V)`` arrays per subject per ROI
+    - Ratings come from CSV (``IAPS_data_amygdala_z.csv``, etc.)
+    - Prediction formula matches MATLAB: ``[ones(N,1), acts] * betas``
+    - Supports binning by arousal / valence deciles for Friedman test
+
+MATLAB Correspondence:
+    - predict_activations_IAPS_OASIS.m → ``predict_iaps_oasis()``
 """
 
 from __future__ import annotations

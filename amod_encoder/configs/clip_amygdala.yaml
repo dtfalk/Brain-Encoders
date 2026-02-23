@@ -1,0 +1,81 @@
+# =============================================================================
+# CLIP ViT-L/14 encoding model — extends AMOD with CLIP visual features
+# =============================================================================
+# Uses OpenAI's CLIP ViT-L/14 (via timm) instead of EmoNet fc7.
+# This lets you test whether CLIP representations predict amygdala BOLD
+# better/differently than EmoNet's emotion-specialized features.
+#
+# To extract features first:
+#   amod-encoder extract-features -c configs/clip_amygdala.yaml \
+#       --source /data/500_days_of_summer.mp4 \
+#       --output output/clip_vit_l/movie_features.npy
+#
+# Then fit:
+#   amod-encoder fit -c configs/clip_amygdala.yaml
+
+paths:
+  bids_root: /data/ds002837
+  # Point to the pre-extracted CLIP features (from extract-features command)
+  osf_fc7_mat: output/clip_vit_l/movie_features.npy
+  output_dir: ./output/clip_vit_l/amygdala
+  iaps_csv: /data/osf/IAPS_data_amygdala_z.csv
+  oasis_csv: /data/osf/OASIS_data_amygdala_z.csv
+
+subjects:
+  - "01"
+  - "02"
+  - "03"
+  - "04"
+  - "05"
+  - "06"
+  - "07"
+  - "08"
+  - "09"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+
+roi:
+  - name: amygdala
+    mask_path: /data/masks/canlab2018_amygdala_combined.nii.gz
+    atlas: canlab2018
+
+features:
+  type: clip_vit_l
+  n_features: 1024               # CLIP ViT-L/14 output dim
+  frame_sampling: 5
+  align_method: resample_poly
+  zscore: false
+  convolution_order: resample_then_convolve
+
+  # Model-agnostic extractor config
+  extractor:
+    backend: timm
+    model_name: vit_large_patch14_clip_224.openai
+    layer: null                   # default = penultimate (forward_features)
+    pool: avg                     # global average pool
+    device: cuda                  # use GPU for extraction
+
+hrf:
+  model: spm_canonical
+  dt: 1.0
+
+model:
+  type: pls
+  pls_n_components: 20
+  standardize_X: true
+  standardize_Y: true
+  mode: voxelwise
+
+cv:
+  scheme: kfold
+  n_folds: 5
+  seed: 42

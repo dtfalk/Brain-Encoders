@@ -1,25 +1,28 @@
 """
-Temporal alignment of stimulus features to BOLD TR grid.
+Temporal Alignment
+==================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      features = resample(double(video_imageFeatures), size(masked_dat.dat,2), lendelta);
-  - develop_encoding_models_subregions.m:
-      features = resample(double(X), size(masked_dat.dat,2), size(X,1));
-      (here X is already HRF-convolved before resampling)
-Key matched choices:
-  - MATLAB resample() uses polyphase anti-aliasing filtering
-  - scipy.signal.resample uses FFT-based resampling (Fourier method)
-  - These are NOT identical but are the closest scipy equivalent
-  - The resampling maps N_frames → N_TRs (ratio = n_trs / n_frames)
-  - Applied independently to each feature column
-Assumptions / deviations:
-  - MATLAB resample(x, p, q) uses a polyphase FIR filter with Kaiser window
-  - scipy.signal.resample uses FFT zero-padding/truncation (sinc interpolation)
-  - For large resampling factors these produce similar but not identical results
-  - scipy.signal.resample_poly is closer to MATLAB's resample (polyphase)
-  - We use resample_poly as the best match
-  - TODO: validate numerical closeness against MATLAB output for this dataset
+Resamples stimulus feature matrices from video-frame rate to BOLD TR grid.
+
+Core Algorithm::
+
+    aligned = resample_poly(features, up=n_trs, down=n_frames, axis=0)
+
+    This maps the N_frames × D feature matrix to N_TRs × D, matching::
+
+        features = resample(double(video_imageFeatures), ...
+                            size(masked_dat.dat, 2), lendelta);
+
+Design Principles:
+    - ``scipy.signal.resample_poly`` is the closest match to MATLAB
+      ``resample()`` (polyphase FIR filter with Kaiser window)
+    - ``scipy.signal.resample`` (FFT/sinc) is provided as a fallback
+    - Resampling is applied independently to each feature column
+    - The up/down ratio is reduced by GCD for numerical stability
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``align_features_to_trs()``
+    - develop_encoding_models_subregions.m → same, different call point
 """
 
 from __future__ import annotations
@@ -72,8 +75,8 @@ def align_features_to_trs(
       - Simplify by GCD for efficiency
       - Uses a FIR anti-aliasing filter (polyphase implementation)
     """
-    if method != "resample":
-        raise ValueError(f"Unknown alignment method: {method}. Only 'resample' is supported.")
+    if method not in ("resample", "resample_poly"):
+        raise ValueError(f"Unknown alignment method: {method}. Use 'resample' or 'resample_poly'.")
 
     n_frames, n_features = features.shape
     log_matlab_note(

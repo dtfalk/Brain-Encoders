@@ -1,0 +1,188 @@
+﻿Total paragraphs: 1140
+[0] Title: Understanding human amygdala function with artificial neural
+[1] networks
+[2] Abbreviated Title: Modeling Amygdala Function
+[3] Grace Jang
+[4] Philip A. Kragel*
+[5] 6
+[6] 7	Emory University, Atlanta, GA 30032
+[7] 8
+[8] 9
+[10] 10
+[11] 11
+[12] 12
+[13] 13
+[14] 14
+[15] 15
+[16] 16
+[17] 17
+[18] 18
+[19] 19
+[20] 20
+[21] 21
+[22] 22
+[23] 23
+[24] 24
+[25] 25
+[26] 26
+[27] 27
+[28] 28	* Please address correspondence to:
+[29] 29
+[30] Philip A. Kragel
+[31] Department of Psychology, PAIS 475
+[32] Emory University
+[33] Atlanta, GA 30032
+[34] 404-727-3409
+[35] pkragel@emory.edu
+[36] 36
+[37] 37
+[38] Conflict of interest statement
+[39] The authors have no competing interests to declare.
+[40] 40
+[41] Acknowledgements
+[42] This project was partially supported by grant R01MH134972 to PK. GJ was supported by grant
+[43] T32NS096050.
+[45] Abstract
+[47] The amygdala is a cluster of subcortical nuclei that receives diverse sensory inputs and
+[49] projects to the cortex, midbrain and other subcortical structures. Numerous accounts of amygdalar
+[51] contributions to social and emotional behavior have been offered, yet an overarching description
+[53] of amygdala function remains elusive. Here we adopt a computationally explicit framework that
+[55] aims to develop a model of amygdala function based on the types of sensory inputs it receives,
+[57] rather than individual constructs such as threat, arousal, or valence. Characterizing human fMRI
+[59] signal acquired as participants viewed a full-length film, we developed encoding models that
+[61] predict both patterns of amygdala activity and self-reported valence evoked by naturalistic images.
+[63] We use deep image synthesis to generate artificial stimuli that distinctly engage encoding models
+[65] of amygdala subregions that systematically differ from one another in terms of their low-level
+[67] visual properties. These findings characterize how the amygdala compresses high-dimensional
+[69] sensory inputs into low-dimensional representations relevant for behavior.
+[71] Main
+[73] Introduction
+[75] Animals navigate complex environments which contain diverse threats and opportunities
+[77] for reward. Succeeding at this task depends on the amygdaloid complexΓÇöa subcortical cluster of
+[79] nuclei in the medial temporal lobe (Swanson and Petrovich, 1998; Murray and Wise, 2004). The
+[81] amygdala receives inputs from multiple sensory modalities (McDonald, 1998; Sah et al., 2003;
+[83] Janak and Tye, 2015) and is a convergence zone with connections to much of cortex, subcortex,
+[85] and midbrain systems involved in motivated behavior and autonomic control (Pessoa and
+[87] Adolphs, 2010). The primates amygdala receives information about the environment
+[88] predominantly from the ventral visual stream (Pessoa and Adolphs, 2010; Kravitz et al., 2013).
+[90] Through computations performed on these and other inputs, the amygdala is thought to detect
+[92] events of biological relevance and prepare animals to react appropriately (Sander et al., 2003;
+[94] Cunningham and Brosch, 2012).
+[96] Human neuroimaging has shed light on amygdala function by examining its sensitivity to
+[98] differences in reward, threat, valence, salience, and affective intensity. Typical experiments
+[100] identify associations between different stimulus properties and amygdala responses. Meta-
+[102] analytic summaries of this work show that the amygdala is sensitive to a wide array of
+[104] biologically relevant inputs (Costafreda et al., 2008; Vytal and Hamann, 2010; Lindquist et al.,
+[106] 2012, 2016; Kragel and LaBar, 2016). One explanation of these findings is that the amygdala is
+[108] involved in multiple functions, and that different neural ensembles process different stimulus
+[109] properties relevant for distinct behaviors. However, identifying the set of variables that best
+[110] explain amygdala function has been a challenge, as most studies only manipulate one or a few
+[111] variables at a time, limiting strong inferences on amygdala specialization.
+[113] An alternative way to understand amygdala function is through systems identification.
+[115] This approach involves building models of a system from measurements of its inputs and
+[117] outputs. From this perspective, a complete understanding of amygdala function would comprise
+[119] a model that transforms amygdala inputs (e.g., projections originating in the ventral visual
+[121] stream) onto output variables conveyed to downstream structures (e.g., the hypothalamus,
+[123] striatum, and midbrain structures). Compared to conventional approaches that involve
+[124] manipulating a small number of variables and measuring changes in amygdala activity, systems
+[125] identification requires experiments with complex sensory inputs that better match the diversity of
+[126] amygdala inputs. The performance of computational models that predict amygdala responses to a
+[127] given set of sensory inputs provides a metric for quantifying our understanding of brain function.
+[129] Here we probe multiple aspects of amygdala function from a systems identification
+[131] perspective. Given evidence that the majority of sensory inputs to the primate amygdala originate
+[133] from the ventral visual cortex (Kravitz et al., 2013), we predict that a computational proxy of the
+[135] ventral stream should be sufficient to predict amygdala responses to emotionally evocative
+[137] stimuli. Because sensory inputs predominantly project to the basal and lateral nuclei, whereas
+[139] other nuclei are involved in different functions, prediction accuracy should systematically differ
+[141] across amygdala subregions. We test these predictions using a combination of human
+[143] neuroimaging, computational models of visual processing, and self-reported emotion. We
+[145] analyze human brain responses to a full-length motion picture film (Aliko et al., 2020) and
+[147] develop linear encoding models to predict amygdala responses using a deep convolutional neural
+[149] network (Kragel et al., 2019) trained to recognize the emotional content of scenes.
+[151] We validate these models in two in silico experiments focused on prediction and control.
+[153] First, we examine whether the models predict valence and arousal ratings in response to
+[155] naturalistic images from two affective image databases (Bradley and Lang, 2007; Kurdi et al.,
+[157] 2017). Second, we use deep image synthesis (Nguyen et al., 2016; Bashivan et al., 2019) to
+[159] generate visual stimuli that maximally engage amygdala subregions and subsequently identify
+[161] which visual properties make them distinct. Collectively, these tests establish a framework for
+[163] understanding amygdala function by characterizing how it transforms visual inputs into low-
+[165] dimensional representations that can be used to guide behavior.
+[166] Methods
+[167] Development of Amygdala Encoding Models
+[168] We fit encoding models (Naselaris et al., 2011) to develop image computable models that
+[169] take images presented to participants as inputs and predict amygdala responses (Figure 1). Based
+[170] on anatomical and functional connectivity (Amaral and Price, 1984; Kravitz et al., 2013), we
+[171] used a deep convolutional neural network that approximates the primate ventral visual stream
+[172] (Kar et al., 2019) as it extracts highly processed visual features that are fed forward into lateral
+[173] amygdala. We fit models using brain responses to naturalistic audiovisual stimuli with rich
+[174] socioemotional content known to engage the amygdala.
+[175] Neuroimaging Experiment
+[176] Functional magnetic resonance imaging (fMRI) data for this study were sampled from the
+[178] Naturalistic Neuroimaging Database (NNDb) (Aliko et al., 2020). Detailed descriptions of the
+[180] participants, the paradigm used for data acquisition, and the preprocessing of the fMRI data have
+[182] been described elsewhere (Aliko et al., 2020; Soderberg et al., 2023). Briefly, blood oxygen level
+[184] dependent (BOLD) data from 20 subjects viewing a full-length motion picture film 500 Days of
+[186] Summer was previously collected in a 1.5 T Siemens MAGNETOM Avanto with a 32 channel
+[188] head coil (Siemens Healthcare, Erlangen, Germany) and consequently used for this study.
+[190] Figure 1. Schematic of encoding model workflow. A full-length movie was shown to participants concurrent with fMRI and was input to a deep convolutional neural network to extract features from frames of the video stimulus. Partial least squares regression identified a mapping between visual features and amygdala response patterns for each subject (N = 20). V1-V4: visual areas 1-4; IT: inferotemporal cortex; conv: convolutional layer;  fc:  fully  connected  layer;  PLS:  partial  least  squares.
+[193] Feature Extraction
+[194] We used a deep convolutional neural network, EmoNet (Kragel et al., 2019), as a feature
+[196] extractor for encoding models. This model was finetuned from AlexNet (Krizhevsky et al., 2012)
+[198] to classify emotional scenes and consists of five convolutional layers and three fully connected
+[200] layers. We passed every fifth frame of the movie shown to participants during scanning as inputs
+[202] to EmoNet and extracted features from the penultimate layer fc7 because this layer best
+[204] approximates later stages of processing in the ventral visual pathway (Horikawa and Kamitani,
+[206] 2017; Kragel et al., 2019).
+[207] Regions of Interest
+[209] We modeled fMRI signal localized to amygdala masks based on cytoarchitecture
+[211] (Amunts et al., 2005) and include the bilateral amygdala (247-252 voxels) and amygdala
+[213] subregions (the basolateral complex (LB), the centromedial nucleus (CM), the superficial (SF)
+[215] group, and the amygdalostriatal transition zone (AStr); 29 to 178 voxels). Some participants had
+[217] partial coverage in some regions of interest (4 out of 20 subjects had < 252 voxels for the
+[219] amygdala). We also fit encoding models for multiple control regions, including early cortical
+[221] visual areas (V1-V3; 3,061-3,069 voxels) and the inferotemporal cortex (TE2, TF; 700-1010
+[223] voxels) examined bilaterally as delineated by multi-modal parcellation (Glasser et al., 2016).
+[225] Model Specification
+[227] After extracting the image features from the movie, we convolved these features to
+[228] account for the hemodynamic time delay of the BOLD data using a canonical double gamma
+[229] response function (Friston, 2007). We specified separate partial least squares regressions (Wold
+[230] et al., 2001) for each subject to obtain regression coefficients (beta estimates) for encoding
+[231] models. We used the time-matched image features from the movie as the predictor variable and
+[232] the observed BOLD activations masked by the voxels of the amygdala and other control regions
+[233] of interest as the outcome variable. We specified encoding models for each region of interest
+[235] (amygdala and its subregions, visual cortex, and inferotemporal cortex) for each subject that
+[237] predict activations in each region of interest in response to the dynamic visual stimuli.
+[239] Model Estimation
+[241] After specifying these encoding models, we used 5-fold cross validation to estimate the
+[243] correlation between voxelwise encoding model predictions and the observed activations for each
+[245] subject. Multivariate mappings were identified between visual features and BOLD response
+[247] patterns using partial least squares regression. Regression models were regularized by retaining
+[249] 20 components. We calculated the correlation between the predicted and observed activations for
+[251] each voxel and normalized the coefficients using FisherΓÇÖs Z transformation for inference.
+[253] Statistical Inference
+[255] To assess whether performance was above chance levels, we conducted one-sample t-
+[257] tests on voxel-wise and region-average data. Voxel-wise inference was performed using false
+[259] discovery rate correction with a threshold of q < .05. To test for differences in predictive
+[261] performance across amygdala subregions, we performed a one-way repeated measures ANOVA.
+[263] We specified planned contrasts that compared the performance of amygdala encoding models in
+[265] the LB subregion with other amygdala subregions (CM, SF, AStr), the performance of the CM
+[267] subregion to the SF and AStr subregions, and the performance in the SF subregion to the AStr
+[268] subregion.
+[269] Evaluating Encoding Model Responses to Affective Images
+[270] We validated encoding models using naturalistic images from standardized affective
+[271] image databases (i.e., the International Affective Picture System (Bradley and Lang, 2007) and
+[272] the Open Affective Standardized Image Set (Kurdi et al., 2017)). The goal of this experiment
+[273] was to determine whether the predicted activations from our encoding models would behave
+[275] similarly to human brainsΓÇöexhibiting increased engagement along the dimensions of valence or
+[277] arousal (Lindquist et al., 2016). Because it is well-established that differences in low-level visual
+[279] properties are associated with alterations in valence and arousal in these databases (Anders et al.,
+[281] 2008; Styliadis et al., 2014; Bonnet et al., 2015; Hartling et al., 2021), we also accounted for
+[283] variation with low-level visual features, namely color (red, green, blue) and spatial power (high
+[285] and low spatial frequencies).
+[287] We used the naturalistic images as inputs to encoding models and tested for associations
+[289] with normative valence and arousal ratings, and their interactions. We performed this analysis on
+[291] both the IAPS and OASIS datasets. For each region, the responses to every image for each of the
+[293] 20 encoding models (one per subject) were obtained by multiplying the activation produced in
+[295] layer fc7 of EmoNet with the regression coefficients of that subjectΓÇÖs encoding model. We
+[297] obtained the normative valence and arousal ratings for each of the naturalistic images. We then
+[299] extracted the low-level visual features of color intensity (red, blue, and green) and spectral power

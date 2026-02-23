@@ -1,18 +1,18 @@
 """
-TR timing and run structure for ds002837.
+TR Timing and Run Structure
+===========================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m  (implicit via size(masked_dat.dat, 2))
-  - extract_features.m  (every 5th frame extraction)
-Key matched choices:
-  - TR is determined from BOLD NIfTI header (pixdim[4])
-  - Movie is 500 Days of Summer; feature sampling is every 5th frame
-  - Number of TRs equals size(masked_dat.dat, 2) in MATLAB
-  - Single run per subject (continuous movie viewing)
-Assumptions / deviations:
-  - MATLAB scripts assume a single continuous run per subject
-  - We support multiple runs in config but default to single
-  - TR value is read from NIfTI; if unavailable, defaults to 1.0s
+Reads repetition time (TR) from NIfTI headers and tracks movie-run metadata.
+
+Design Principles:
+    - TR determined from BOLD ``pixdim[4]`` (NIfTI header)
+    - Falls back to 1.0 s if header is missing or ambiguous
+    - Single continuous run per subject (500 Days of Summer movie)
+    - Feature sampling rate: every 5th frame
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m (implicit via ``size(masked_dat.dat, 2)``)
+    - extract_features.m (every-5th-frame extraction)
 """
 
 from __future__ import annotations

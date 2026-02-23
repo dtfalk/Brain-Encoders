@@ -1,28 +1,31 @@
 """
-PLS (Partial Least Squares) encoding model matching MATLAB plsregress.
+PLS Encoding Model
+==================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      [~,~,~,~,b] = plsregress(timematched_features, masked_dat.dat', 20);
-  - develop_encoding_models_subregions.m:
-      [~,~,~,~,b] = plsregress(features, masked_dat.dat', 20);
-  - decode_activation_targets_artificial_stim.m:
-      [~,~,~,~,b] = plsregress(double(enc_prediction(train,:)), Y(train,:), 7);
-Key matched choices:
-  - MATLAB plsregress uses SIMPLS algorithm
-  - sklearn PLSRegression uses NIPALS by default (closest available)
-  - n_components = 20 (amygdala) or min(20, n_voxels) capped per MATLAB
-  - Y is multivariate: all voxels at once (not per-voxel fitting)
-  - betas include intercept in first row
-  - MATLAB plsregress centers X and Y internally; sklearn does the same
-  - MATLAB does NOT standardize (scale) X or Y; sklearn PLSRegression
-    has scale=False available but defaults to True — we set scale=False
-Assumptions / deviations:
-  - MATLAB SIMPLS ≠ sklearn NIPALS exactly, but they optimize the same
-    objective and produce very similar (not identical) betas
-  - For exact SIMPLS reproduction, a custom implementation would be needed
-  - We provide a SIMPLS implementation below as primary, with sklearn fallback
-  - TODO: quantify numerical difference on this specific dataset
+Partial Least Squares regression matching MATLAB ``plsregress``.
+
+Core Algorithm (SIMPLS)::
+
+    1. Centre X and Y
+    2. For each component k = 1 .. n_components:
+       a. r = dominant left singular vector of XᵀY
+       b. t = X r           (scores)
+       c. p = Xᵀt / (tᵀt)  (X loadings)
+       d. q = Yᵀt / (tᵀt)  (Y loadings)
+       e. Deflate XᵀY by removing component
+    3. Betas = R (TᵀT)⁻¹ Tᵀ Y  (with intercept prepended)
+
+Design Principles:
+    - Custom SIMPLS is the primary solver (matches MATLAB ``plsregress``)
+    - sklearn ``PLSRegression`` (NIPALS) is the fallback if SIMPLS fails
+    - ``n_components = 20`` matches the paper; capped at min(D, V, T)
+    - Y is multivariate: all voxels fitted simultaneously
+    - Betas include intercept in row 0: shape ``(D+1, V)``
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``plsregress(X, Y', 20)``
+    - develop_encoding_models_subregions.m → same call, subregion masks
+    - decode_activation_targets_artificial_stim.m → ``plsregress(..., 7)``
 """
 
 from __future__ import annotations
@@ -121,7 +124,11 @@ class PLSEncodingModel(EncodingModel):
 
         # Use SIMPLS implementation to match MATLAB more closely
         try:
-            betas_no_intercept, intercept = _simpls(X, Y, n_comp)
+            betas_no_intercept, intercept = _simpls(
+                X, Y, n_comp,
+                standardize_X=self.standardize_X,
+                standardize_Y=self.standardize_Y,
+            )
             self._intercept = intercept
             self._betas = np.vstack([intercept.reshape(1, -1), betas_no_intercept])
             logger.info("PLS fit via SIMPLS: betas shape = %s", self._betas.shape)
@@ -194,7 +201,13 @@ class PLSEncodingModel(EncodingModel):
         return self._intercept
 
 
-def _simpls(X: np.ndarray, Y: np.ndarray, n_components: int):
+def _simpls(
+    X: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    standardize_X: bool = False,
+    standardize_Y: bool = False,
+):
     """SIMPLS algorithm matching MATLAB plsregress internals.
 
     Parameters
@@ -205,6 +218,10 @@ def _simpls(X: np.ndarray, Y: np.ndarray, n_components: int):
         Response matrix.
     n_components : int
         Number of PLS components.
+    standardize_X : bool
+        If True, z-score X columns after centering. MATLAB does NOT do this.
+    standardize_Y : bool
+        If True, z-score Y columns after centering. MATLAB does NOT do this.
 
     Returns
     -------
@@ -235,6 +252,21 @@ def _simpls(X: np.ndarray, Y: np.ndarray, n_components: int):
     Y_mean = Y.mean(axis=0)
     X0 = X - X_mean
     Y0 = Y - Y_mean
+
+    # Optional standardization (MATLAB does NOT do this — off by default)
+    if standardize_X:
+        X_std = X0.std(axis=0, ddof=1)
+        X_std[X_std == 0] = 1.0
+        X0 = X0 / X_std
+    else:
+        X_std = np.ones(D)
+
+    if standardize_Y:
+        Y_std = Y0.std(axis=0, ddof=1)
+        Y_std[Y_std == 0] = 1.0
+        Y0 = Y0 / Y_std
+    else:
+        Y_std = np.ones(V)
 
     # Cross-product matrix
     S = X0.T @ Y0  # (D, V)
@@ -299,6 +331,12 @@ def _simpls(X: np.ndarray, Y: np.ndarray, n_components: int):
         B = W[:, :n_used] @ np.linalg.solve(PW, Q[:, :n_used].T)  # (D, V)
     except np.linalg.LinAlgError:
         B = W[:, :n_used] @ np.linalg.lstsq(PW, Q[:, :n_used].T, rcond=None)[0]
+
+    # Undo standardization to get coefficients in original scale
+    if standardize_X:
+        B = B / X_std.reshape(-1, 1)
+    if standardize_Y:
+        B = B * Y_std.reshape(1, -1)
 
     # Intercept: Y_mean - X_mean @ B
     intercept = Y_mean - X_mean @ B

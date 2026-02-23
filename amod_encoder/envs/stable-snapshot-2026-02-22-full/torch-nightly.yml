@@ -1,0 +1,80 @@
+# ===========================================================================
+#  torch-nightly — Bleeding-edge PyTorch (RTX 5070 Ti)
+# ===========================================================================
+#
+#  Hardware: NVIDIA GeForce RTX 5070 Ti (Blackwell, sm_120, 16 GB VRAM)
+#  Driver:   576.88+ / CUDA 12.9
+#  PyTorch:  Nightly with CUDA 12.8 (latest kernels + torch.compile)
+#
+#  Usage:
+#    conda env create -f envs/torch-nightly.yml
+#    conda activate torch-nightly
+#
+#  Purpose: Testing new PyTorch features, torch.compile, latest optimizers,
+#  experimental backends. Use torch-stable for production work.
+#
+#  WARNING: Nightlies can break. If something fails, pin the date:
+#    pip install --pre torch==2.12.0.dev20260222 --index-url ...
+# ===========================================================================
+
+name: torch-nightly
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.12
+  - pip
+
+  # ---------- BLAS (OpenBLAS, NOT MKL — avoids OpenMP conflict with torch) ----------
+  - libblas=*=*openblas*
+  - libcblas=*=*openblas*
+  - liblapack=*=*openblas*
+
+  # ---------- Core Scientific ----------
+  - numpy>=1.26
+  - scipy>=1.12
+  - pandas>=2.1
+  - matplotlib>=3.8
+  - scikit-learn>=1.4
+
+  # ---------- Utilities ----------
+  - rich>=13.0
+  - ffmpeg>=6.0
+  # NOTE: Do NOT install pillow via conda — it causes DLL conflicts
+  #       with pip-installed torchvision on Windows. Pillow is installed
+  #       automatically by torchvision via pip below.
+
+  # ---------- Dev ----------
+  - jupyterlab>=4.0
+  - pytest>=8.0
+
+  # ---------- Pip-Only (PyTorch nightly) ----------
+  # NOTE: conda pip section doesn't support --pre.
+  # After env creation, install torch nightly manually:
+  #   pip install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+  - pip:
+
+    # -- Common ecosystem --
+    - timm>=1.0
+    - transformers>=4.40
+    - accelerate>=0.30
+    - safetensors>=0.4
+    - huggingface-hub>=0.23
+
+    # -- Image/Video --
+    - opencv-python>=4.9
+
+    # -- Neuroimaging / Stats --
+    - h5py>=3.10
+    - nibabel>=5.2
+    - nilearn>=0.10
+    - statsmodels>=0.14
+    - pingouin>=0.5
+    - pydantic>=2.5
+
+    # -- Data / Monitoring --
+    - datasets>=2.18
+    - wandb>=0.16
+    - nvidia-ml-py>=12.0

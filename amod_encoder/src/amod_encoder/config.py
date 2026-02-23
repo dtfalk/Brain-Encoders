@@ -1,16 +1,36 @@
 """
-Configuration schema and loader for the AMOD encoder pipeline.
+Configuration Schema and Loader
+===============================
 
-This module corresponds to AMOD script(s): all scripts (config is implicit in MATLAB globals)
-Key matched choices:
-  - All MATLAB hardcoded paths/parameters are now in YAML
-  - subjects list matches MATLAB {'1'..'20'}
-  - PLS n_components=20 matches plsregress(..., 20)
-  - CV k=5 matches crossvalind('k', N, 5)
-  - HRF dt=1 matches spm_hrf(1)
-Assumptions / deviations:
-  - MATLAB scripts have no formal config; we centralize everything here
-  - seed is added for reproducibility (MATLAB crossvalind has no explicit seed)
+Pydantic-based configuration schema for the entire AMOD encoder pipeline.
+Every parameter that was hard-coded across 24 MATLAB scripts now lives in
+a single, validated YAML file.
+
+Design Principles:
+    - Single source of truth for all pipeline parameters
+    - Pydantic validation catches typos and type errors before runtime
+    - Field aliases allow both concise YAML keys and descriptive Python names
+    - ExtractorConfig makes the feature backend pluggable (precomputed, timm)
+
+Configuration Hierarchy::
+
+    PipelineConfig
+    ├── PathsConfig          File system paths (BIDS root, OSF data, output)
+    ├── ROIConfig[]          One or more regions of interest
+    ├── ExtractorConfig      Feature extractor backend selection
+    ├── FeaturesConfig       Alignment, z-scoring, convolution order
+    ├── HRFConfig            Hemodynamic response function parameters
+    ├── ModelConfig          PLS / Ridge model hyperparameters
+    ├── CVConfig             Cross-validation scheme and folds
+    └── ComputeConfig        CPU / GPU backend selection
+
+MATLAB Correspondence:
+    - MATLAB scripts have no formal config; we centralise everything here
+    - subjects list matches MATLAB ``{'1'..'20'}``
+    - PLS ``n_components=20`` matches ``plsregress(..., 20)``
+    - CV ``k=5`` matches ``crossvalind('k', N, 5)``
+    - HRF ``dt=1`` matches ``spm_hrf(1)``
+    - seed is added for reproducibility (MATLAB has no explicit seed)
 """
 
 from __future__ import annotations
@@ -18,7 +38,6 @@ from __future__ import annotations
 import datetime
 import json
 import subprocess
-from dataclasses import field
 from pathlib import Path
 from typing import Any, Literal
 
@@ -59,17 +78,85 @@ class ROIConfig(BaseModel):
     mask_path: Path = Field(
         ..., description="Path to NIfTI mask file for this ROI"
     )
+    atlas: str | None = Field(
+        default=None,
+        description="Atlas name (e.g., 'canlab2018', 'custom') — for provenance only",
+    )
+
+
+class ExtractorConfig(BaseModel):
+    """Feature extractor configuration — model-agnostic.
+
+    Specifies which model/backend to use for feature extraction.
+    When backend='precomputed', features are loaded from a file (AMOD replication).
+    When backend='timm', features are extracted live from images/video using any
+    timm-supported architecture (ResNet, ViT, CLIP, DINOv2, ConvNeXt, etc.).
+    """
+
+    backend: Literal["precomputed", "timm"] = Field(
+        default="precomputed",
+        description=(
+            "'precomputed': load from .mat/.npy (default, for replication). "
+            "'timm': extract live with any timm model."
+        ),
+    )
+    model_name: str | None = Field(
+        default=None,
+        description=(
+            "Timm model identifier. Examples: "
+            "'resnet50', 'vit_large_patch14_clip_224.openai', "
+            "'vit_large_patch14_dinov2.lvd142m', 'convnext_large.fb_in22k_ft_in1k'. "
+            "See timm.list_models() for all options. Only used when backend='timm'."
+        ),
+    )
+    layer: str | None = Field(
+        default=None,
+        description=(
+            "Layer to extract from. None = penultimate (forward_features). "
+            "Common: 'fc', 'head', 'pre_logits'. Only used when backend='timm'."
+        ),
+    )
+    weights: str | None = Field(
+        default=None,
+        description=(
+            "Path to custom .pth weights file. If None, uses timm defaults. "
+            "Use this for EmoNet or any custom-trained model."
+        ),
+    )
+    pool: Literal["avg", "cls", "none"] = Field(
+        default="avg",
+        description="Pooling for spatial features: 'avg', 'cls' (ViT), 'none' (flatten).",
+    )
+    device: Literal["cpu", "cuda"] = Field(
+        default="cpu",
+        description="Device for live extraction.",
+    )
 
 
 class FeaturesConfig(BaseModel):
     """Feature extraction settings."""
 
-    feature_name: str = Field(default="fc7", description="CNN feature layer name")
-    align_method: Literal["resample"] = Field(
+    # Accept both 'feature_name' and 'type' for flexibility
+    feature_name: str = Field(
+        default="fc7", alias="type",
+        description="CNN feature layer name (e.g., 'fc7')",
+    )
+    n_features: int = Field(
+        default=4096,
+        description="Dimensionality of feature vector (fc7 = 4096)",
+    )
+    frame_sampling: int = Field(
+        default=5,
+        description=(
+            "Every Nth frame was used for feature extraction. "
+            "MATLAB: vid_feat_fullCorr2(:, 1:5:end ...)"
+        ),
+    )
+    align_method: Literal["resample", "resample_poly"] = Field(
         default="resample",
         description=(
-            "Temporal alignment method. 'resample' matches MATLAB resample() "
-            "(polyphase anti-aliasing resampling via scipy.signal.resample)"
+            "Temporal alignment method. 'resample' / 'resample_poly' both map to "
+            "scipy.signal.resample_poly (matches MATLAB resample())."
         ),
     )
     zscore: bool = Field(
@@ -79,6 +166,23 @@ class FeaturesConfig(BaseModel):
             "MATLAB does NOT z-score fc7 features before PLS."
         ),
     )
+    convolution_order: Literal["resample_then_convolve", "convolve_then_resample"] = Field(
+        default="resample_then_convolve",
+        description=(
+            "Order of alignment and HRF convolution. "
+            "'resample_then_convolve' matches develop_encoding_models_amygdala.m. "
+            "'convolve_then_resample' matches develop_encoding_models_subregions.m."
+        ),
+    )
+    extractor: ExtractorConfig | None = Field(
+        default=None,
+        description=(
+            "Feature extractor configuration. If None, uses precomputed features "
+            "from paths.osf_fc7_mat (backward compatible with AMOD replication)."
+        ),
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class HRFConfig(BaseModel):
@@ -265,7 +369,9 @@ def build_provenance(cfg: PipelineConfig) -> dict:
     prov: dict[str, Any] = {
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "amod_encoder_version": "0.1.0",
-        "config_hash": hash(cfg.model_dump_json()),
+        "config_hash": __import__("hashlib").sha256(
+            cfg.model_dump_json().encode()
+        ).hexdigest(),
     }
     try:
         git_hash = subprocess.check_output(

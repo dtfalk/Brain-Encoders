@@ -1,0 +1,2 @@
+[console_scripts]
+amod-encoder = amod_encoder.cli.main:app

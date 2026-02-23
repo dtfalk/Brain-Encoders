@@ -1,13 +1,18 @@
 """
-Base encoding model interface.
+Encoding Model Base Class
+=========================
 
-This module corresponds to AMOD script(s): (abstract interface)
-Key matched choices:
-  - fit(X, Y) → betas: matches MATLAB plsregress(X, Y, n_components)
-  - predict(X) → Yhat: matches [ones(N,1) X] * betas
-  - betas include intercept as first row (MATLAB convention)
-Assumptions / deviations:
-  - Generic interface; concrete implementations in pls.py and ridge.py
+Abstract interface for voxelwise encoding models.
+
+Design Principles:
+    - ``fit(X, Y) → betas``: matches MATLAB ``plsregress(X, Y, n_comp)``
+    - ``predict(X) → Yhat``: matches ``[ones(N,1) X] * betas``
+    - Betas include intercept as row 0: shape ``(D+1, V)``
+    - Concrete implementations: PLS (``pls.py``) and Ridge (``ridge.py``)
+
+MATLAB Correspondence:
+    - ``[~,~,~,~,b] = plsregress(X, Y, n_comp)``
+    - ``b`` is ``(D+1, V)`` where ``b(1,:) = intercept``
 """
 
 from __future__ import annotations

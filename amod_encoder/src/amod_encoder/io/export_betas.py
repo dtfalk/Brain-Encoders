@@ -1,20 +1,17 @@
 """
-Export betas to CSV in MATLAB-compatible format.
+Beta Export
+===========
 
-This module corresponds to AMOD script(s):
-  - make_random_subregions_betas_to_csv.m:
-      csvwrite([...'meanbeta_region' num2str(r) '_sub-' ... '.csv'],
-               mean(b(2:end, split==r)')');
-Key matched choices:
-  - Export mean betas (averaged across voxels within ROI) as single-column CSV
-  - Exclude intercept row (b(2:end,:) in MATLAB → betas[1:,:] in Python)
-  - Column vector format matching MATLAB csvwrite
-  - Filename convention: meanbeta_sub-{s}_{roi}_fc7_invert_imageFeatures.csv
-Assumptions / deviations:
-  - MATLAB exports mean across voxels: mean(b(2:end, voxel_mask)')' 
-    → this is mean over voxels for each feature dimension
-  - We save raw betas AND mean betas for flexibility
-  - Random subregion splitting (randi(4, n_voxels, 1)) handled separately
+Exports model betas to CSV in MATLAB-compatible column-vector format.
+
+Design Principles:
+    - Mean betas (averaged across voxels) as single-column CSV
+    - Excludes intercept row (``b(2:end,:)`` in MATLAB → ``betas[1:, :]``)
+    - Filename: ``meanbeta_sub-{s}_{roi}_fc7_invert_imageFeatures.csv``
+    - Also exports full voxelwise betas for advanced downstream analysis
+
+MATLAB Correspondence:
+    - make_random_subregions_betas_to_csv.m → ``export_mean_betas_csv()``
 """
 
 from __future__ import annotations

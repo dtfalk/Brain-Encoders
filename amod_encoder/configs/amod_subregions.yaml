@@ -56,6 +56,9 @@ features:
   frame_sampling: 5
   align_method: resample_poly
   zscore: false
+  # CRITICAL: MATLAB subregions script convolves BEFORE resampling
+  # This is the opposite order from develop_encoding_models_amygdala.m
+  convolution_order: convolve_then_resample
 
 hrf:
   model: spm_canonical
@@ -64,8 +67,8 @@ hrf:
 model:
   type: pls
   pls_n_components: 20
-  standardize_X: true
-  standardize_Y: true
+  standardize_X: false               # MATLAB plsregress centres only, does NOT standardise
+  standardize_Y: false
   mode: voxelwise
 
 cv:

@@ -23,6 +23,7 @@ features:
   frame_sampling: 5
   align_method: resample_poly
   zscore: false
+  convolution_order: resample_then_convolve  # default; change to convolve_then_resample if needed
 
 hrf:
   model: spm_canonical

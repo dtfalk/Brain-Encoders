@@ -1,19 +1,21 @@
 """
-BIDS dataset loader for ds002837 (Naturalistic Neuroimaging Database).
+BIDS Dataset Loader
+===================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m
-  - develop_encoding_models_subregions.m
-  - compile_matrices.m
-Key matched choices:
-  - Loads from derivatives/sub-{s}/func/sub-{s}_task-500daysofsummer_bold_blur_censor.nii.gz
-  - This is a preprocessed (blurred + censored) BOLD file, not raw
-  - The MATLAB code loads via fmri_data() from CanlabCore; we use nibabel
-  - No additional temporal filtering or nuisance regression is applied in MATLAB
-Assumptions / deviations:
-  - MATLAB's fmri_data() handles some metadata; we use nibabel + nilearn
-  - Subject IDs are strings '1'..'20' in MATLAB; we support arbitrary IDs
-  - MATLAB loads a single 4D volume per subject (one run of the movie)
+Discovers subjects and loads preprocessed BOLD data from ds002837
+(Naturalistic Neuroimaging Database, ``500 Days of Summer``).
+
+Design Principles:
+    - Loads from ``derivatives/sub-{s}/func/sub-{s}_task-..._bold_blur_censor.nii.gz``
+    - Preprocessed (blurred + motion-censored) BOLD, not raw
+    - ``nibabel`` replaces MATLAB CanlabCore ``fmri_data()``
+    - Subject IDs are strings; supports arbitrary naming schemes
+    - Single run per subject (continuous movie viewing)
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``load_bold_data()``
+    - develop_encoding_models_subregions.m → same loader
+    - compile_matrices.m → ``discover_subjects()``
 """
 
 from __future__ import annotations

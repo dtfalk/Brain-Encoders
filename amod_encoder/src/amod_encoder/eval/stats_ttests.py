@@ -1,24 +1,19 @@
 """
-Statistical tests (one-sample t-test, paired t-test) for encoding model analyses.
+Statistical Testing
+===================
 
-This module corresponds to AMOD script(s):
-  - perform_ttest_IAPS_OASIS_amygdala.m:
-      [h, p, ci, st] = ttest(squeeze(avg_betas))
-  - perform_pairwise_ttest_IAPS_OASIS_amygdala.m:
-      [h, p, ci, st] = ttest(squeeze(mean(betas)) - squeeze(mean(betas_vc)))
-  - perform_ttest_artificial_stim_subregion.m:
-      [h, p, ci, st] = ttest(betas)
-  - make_parametric_map_amygdala.m:
-      [h, p, ci, stats] = ttest(atanh_matrix);
-Key matched choices:
-  - MATLAB ttest() performs one-sample t-test (H0: mean = 0)
-  - We use scipy.stats.ttest_1samp for exact match
-  - MATLAB ttest(A - B) for paired comparison
-  - We use scipy.stats.ttest_rel for paired t-test
-  - FDR correction: MATLAB's FDR(p, .05); we use statsmodels fdrcorrection
-Assumptions / deviations:
-  - MATLAB ttest returns [h, p, ci, stats]; we return a dict with all fields
-  - FDR implementation may differ slightly between MATLAB and statsmodels
+One-sample and paired t-tests with optional FDR correction.
+
+Design Principles:
+    - MATLAB ``ttest()`` → ``scipy.stats.ttest_1samp`` (exact match)
+    - MATLAB ``ttest(A - B)`` → ``scipy.stats.ttest_rel`` for pairs
+    - FDR correction via ``statsmodels.stats.multitest.fdrcorrection``
+    - Returns a dict with h, p, ci, t-stats (mirrors MATLAB output struct)
+
+MATLAB Correspondence:
+    - perform_ttest_IAPS_OASIS_amygdala.m → ``one_sample_ttest()``
+    - perform_pairwise_ttest_IAPS_OASIS_amygdala.m → ``paired_ttest()``
+    - make_parametric_map_amygdala.m → ``voxelwise_ttest_with_fdr()``
 """
 
 from __future__ import annotations

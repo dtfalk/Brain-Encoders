@@ -1,16 +1,17 @@
 """
-Ridge regression encoding model (baseline / GPU-accelerable alternative).
+Ridge Encoding Model
+====================
 
-This module corresponds to AMOD script(s): (none — MATLAB uses PLS exclusively)
-Key matched choices:
-  - Provided as a baseline comparison model and for GPU acceleration
-  - Ridge with alpha=1.0 is the simplest regularized linear model
-  - When using torch backend, ridge can run on GPU
-  - Betas stored in same (D+1, V) format as PLS for interchangeability
-Assumptions / deviations:
-  - MATLAB pipeline does NOT use ridge regression; this is an addition
-  - Useful for sanity checks and fast debugging with roi_mean mode
-  - GPU implementation warns about potential numerical differences
+Regularised least-squares baseline and GPU-accelerable alternative to PLS.
+
+Design Principles:
+    - Betas stored in same ``(D+1, V)`` format as PLS for interchangeability
+    - ``alpha = 1.0`` default gives mild L2 regularisation
+    - When ``ComputeBackend`` is ``torch``, Ridge runs on GPU
+    - Useful for sanity checks, fast debugging, and ``roi_mean`` mode
+
+MATLAB Correspondence:
+    - MATLAB pipeline uses PLS exclusively; Ridge is an extension
 """
 
 from __future__ import annotations
@@ -126,7 +127,8 @@ class RidgeEncodingModel(EncodingModel):
 
     def _fit_torch(self, X: np.ndarray, Y: np.ndarray) -> None:
         """GPU-accelerated ridge via PyTorch."""
-        torch = self.compute.get_torch() if hasattr(self.compute, 'get_torch') else __import__('amod_encoder.utils.compute_backend', fromlist=['get_torch']).get_torch()
+        from amod_encoder.utils.compute_backend import get_torch
+        torch = get_torch()
         self.compute.warn_numerical_difference("ridge regression")
 
         T, D = X.shape

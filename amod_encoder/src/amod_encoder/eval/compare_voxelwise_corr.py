@@ -1,23 +1,26 @@
 """
-Compare voxelwise correlations between predicted activations and
-valence/arousal for IAPS and OASIS image sets.
+Voxelwise Correlation Comparison
+================================
 
-This module corresponds to AMOD script(s):
-  - compare_voxelwise_corr_IAPS.m
-  - compare_voxelwise_corr_OASIS.m
-Key matched choices:
-  - For each subject, refit PLS on movie data to get betas
-  - Get fc7 activations for IAPS/OASIS images
-  - Predict voxelwise activations: enc_prediction = [ones acts] * b
-  - Correlate predicted activations with [zscore(val'), zscore(arousal'),
-    zscore(val').*zscore(arousal')] — valence, arousal, interaction
-  - Store voxelwise Rmat across subjects
-  - Fisher Z transform (atanh) before group-level ttest
-Assumptions / deviations:
-  - MATLAB uses CanlabCore fmri_data objects for t-test and NIfTI writing;
-    we use scipy.stats.ttest_1samp and nibabel
-  - We assume IAPS/OASIS fc7 activations are pre-computed or computed externally
-  - The regression includes val, arousal, and their interaction (3 regressors)
+Correlates encoding-model predictions with valence, arousal, and their
+interaction for IAPS and OASIS image sets.
+
+Core Algorithm::
+
+    For each subject:
+        1. Predict voxelwise activations: enc_pred = [1, fc7] @ betas
+        2. Regressors = [val_z, arous_z, val_z * arous_z]
+        3. Rmat[s, v, :] = corr(enc_pred[:, v], regressors)
+    Fisher’s Z → group-level t-test → threshold → write NIfTI
+
+Design Principles:
+    - MATLAB CanlabCore ``fmri_data`` objects → ``scipy`` + ``nibabel``
+    - Assumes IAPS/OASIS fc7 activations are pre-computed or extracted
+    - Regression includes val, arousal, and interaction (3 regressors)
+
+MATLAB Correspondence:
+    - compare_voxelwise_corr_IAPS.m → ``compare_voxelwise_corr()``
+    - compare_voxelwise_corr_OASIS.m → same function, OASIS data
 """
 
 from __future__ import annotations
@@ -79,11 +82,24 @@ def correlate_predictions_with_ratings(
 
     # Correlate each voxel's predictions with the 3 regressors
     # MATLAB corr(A, B) where A is (N, V) and B is (N, 3) → (V, 3)
-    voxelwise_corr = np.zeros((enc_prediction.shape[1], 3))
-    for reg_idx in range(3):
-        for v in range(enc_prediction.shape[1]):
-            r, _ = stats.pearsonr(enc_prediction[:, v], regressors[:, reg_idx])
-            voxelwise_corr[v, reg_idx] = r
+    # Vectorized: center columns, compute correlation via dot products
+    N = enc_prediction.shape[0]
+    V = enc_prediction.shape[1]
+
+    # Center predictions and regressors
+    pred_c = enc_prediction - enc_prediction.mean(axis=0, keepdims=True)
+    reg_c = regressors - regressors.mean(axis=0, keepdims=True)
+
+    # Compute denominator: stds
+    pred_std = np.sqrt((pred_c ** 2).sum(axis=0, keepdims=True))  # (1, V)
+    reg_std = np.sqrt((reg_c ** 2).sum(axis=0, keepdims=True))    # (1, 3)
+
+    # Replace zeros to avoid division issues
+    pred_std[pred_std == 0] = np.nan
+    reg_std[reg_std == 0] = np.nan
+
+    # Correlation: (V, 3) = (pred_c.T @ reg_c) / (pred_std.T @ reg_std)
+    voxelwise_corr = (pred_c.T @ reg_c) / (pred_std.T * reg_std)
 
     return voxelwise_corr
 

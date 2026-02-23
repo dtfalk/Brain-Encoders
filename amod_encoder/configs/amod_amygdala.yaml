@@ -44,6 +44,7 @@ features:
   frame_sampling: 5                  # every 5th frame (MATLAB: vid_feat_fullCorr2(:, 1:5:end ...))
   align_method: resample_poly        # scipy.signal.resample_poly (≈ MATLAB resample)
   zscore: false                      # MATLAB does NOT zscore features before PLS
+  convolution_order: resample_then_convolve  # MATLAB amygdala: resample → convolve
 
 hrf:
   model: spm_canonical              # spm_hrf(1); canonical double-gamma
@@ -52,8 +53,8 @@ hrf:
 model:
   type: pls                          # MATLAB: plsregress
   pls_n_components: 20               # MATLAB: ncomp = 20
-  standardize_X: true                # plsregress standardises by default
-  standardize_Y: true
+  standardize_X: false               # MATLAB plsregress centres only, does NOT standardise
+  standardize_Y: false
   mode: voxelwise                    # model each voxel (vs roi_mean)
 
 cv:

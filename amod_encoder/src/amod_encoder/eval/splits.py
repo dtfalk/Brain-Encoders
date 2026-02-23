@@ -1,21 +1,16 @@
 """
-Cross-validation split strategies for encoding model evaluation.
+Cross-Validation Splits
+=======================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      kinds = crossvalind('k', length(masked_dat.dat), 5);
-      for k=1:5 ... end
-  - decode_activation_targets_artificial_stim.m:
-      kinds = double(categorical(subj_full));  (leave-one-subject-out)
-Key matched choices:
-  - MATLAB crossvalind('k', N, 5) generates random k-fold assignments
-  - We use sklearn KFold with shuffle=True for the same behavior
-  - MATLAB has no explicit seed; we add one for reproducibility
-  - For decode tasks, MATLAB uses leave-one-subject-out CV
-Assumptions / deviations:
-  - MATLAB crossvalind randomizes without seed; different each run
-  - We fix seed for reproducibility; set seed=-1 to get MATLAB-like randomness
-  - Block CV (contiguous time chunks) is an option for temporal data
+Generates train/test index partitions for encoding model evaluation.
+
+Design Principles:
+    - ``kfold`` with shuffle matches MATLAB ``crossvalind('k', N, 5)``
+    - Deterministic seed for reproducibility (MATLAB has no explicit seed)
+    - ``block`` CV preserves temporal contiguity (useful for fMRI data)
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``generate_cv_splits(scheme='kfold')``
 """
 
 from __future__ import annotations

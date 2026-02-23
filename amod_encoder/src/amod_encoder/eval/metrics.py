@@ -1,23 +1,25 @@
 """
-Evaluation metrics for encoding models — voxelwise correlation and aggregates.
+Evaluation Metrics
+==================
 
-This module corresponds to AMOD script(s):
-  - develop_encoding_models_amygdala.m:
-      pred_obs_corr(:,:,k) = corr(yhat(kinds==k,:), masked_dat.dat(:,kinds==k)');
-      diag_corr(k,:) = diag(pred_obs_corr(:,:,k));
-      mean_diag_corr = mean(diag_corr);
-  - compile_matrices.m:
-      atanh_matrix = atanh(new_matrix)   (Fisher's Z transform)
-Key matched choices:
-  - Primary metric: voxelwise Pearson correlation between predicted and observed
-  - "Diagonal correlation": for each voxel v, corr(yhat[:,v], y[:,v])
-  - This is the diagonal of the full correlation matrix
-  - Averaging diag_corr across folds gives mean_diag_corr per voxel
-  - Fisher's Z (arctanh) transform applied before group-level statistics
-Assumptions / deviations:
-  - MATLAB corr() computes Pearson correlation (column-wise)
-  - We use numpy corrcoef or manual computation for same result
-  - MATLAB atanh clips at very high r to avoid Inf; we handle NaN/Inf
+Voxelwise correlation and Fisher’s Z for encoding model assessment.
+
+Core Algorithm::
+
+    For each CV fold k:
+        1. Predict: Ŷ = [1, X_test] @ betas
+        2. Correlate: diag_corr[k, v] = corr(Ŷ[:, v], Y_test[:, v])
+    3. mean_diag_corr = mean(diag_corr, axis=0)   # per-voxel mean
+    4. atanh_matrix = arctanh(mean_diag_corr)      # Fisher’s Z
+
+Design Principles:
+    - Primary metric is the *diagonal* of the full correlation matrix
+    - Fisher’s Z (arctanh) stabilises variance before group-level t-tests
+    - Clips extreme r values to [-0.9999, 0.9999] to avoid ±Inf
+
+MATLAB Correspondence:
+    - develop_encoding_models_amygdala.m → ``cross_validated_correlation()``
+    - compile_matrices.m → ``fishers_z()``
 """
 
 from __future__ import annotations
@@ -166,15 +168,17 @@ def cross_validated_correlation(
     yhat = np.zeros_like(Y)
     fold_corrs = []
 
+    # Materialize the generator to a list so we can count and iterate
+    cv_splits_list = list(cv_splits) if not isinstance(cv_splits, list) else cv_splits
+
     log_matlab_note(
         logger,
         "develop_encoding_models_amygdala.m",
-        f"Running {len(list(cv_splits)) if hasattr(cv_splits, '__len__') else '?'}-fold CV "
+        f"Running {len(cv_splits_list)}-fold CV "
         f"on X({T},{X.shape[1]}) → Y({T},{V})",
     )
 
-    # Re-generate splits (generator may be exhausted)
-    for fold_num, (train_idx, test_idx) in enumerate(cv_splits):
+    for fold_num, (train_idx, test_idx) in enumerate(cv_splits_list):
         logger.info("CV fold %d: train=%d, test=%d", fold_num + 1, len(train_idx), len(test_idx))
 
         # Fit on training data

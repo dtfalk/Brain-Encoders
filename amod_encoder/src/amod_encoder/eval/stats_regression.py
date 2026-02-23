@@ -1,21 +1,26 @@
 """
-Regression analysis mirroring perform_regression_IAPS_OASIS.m.
+Regression Analysis
+===================
 
-This module corresponds to AMOD script(s):
-  - perform_regression_IAPS_OASIS.m
-Key matched choices:
-  - Per-subject linear mixed effects regression:
-      roi_enc_pred ~ 1 + val_full_z + arous_full_z + val_full_z:arous_full_z
-        + median_red_z + median_green_z + median_blue_z + high_freq_z + low_freq_z
-  - Betas extracted per subject, then grouped
-  - Piecewise regressions: positive valence, negative valence, neutral range
-  - ANOVA on subregion betas for valence and interaction terms
-Assumptions / deviations:
-  - MATLAB uses fitlme (linear mixed effects); we use statsmodels OLS per subject
-    (since each subject is fit independently, no random effects within a single subject fit,
-     fitlme with no grouping variable reduces to OLS)
-  - MATLAB gridfit for surface plots is not reproduced; we provide raw data for plotting
-  - ANOVA uses scipy/pingouin instead of MATLAB fitrm
+Per-subject OLS and piecewise regression for valence × arousal effects.
+
+Core Algorithm::
+
+    For each subject:
+        Y ~ 1 + val_z + arous_z + val_z:arous_z + R + G + B + HF + LF
+
+    Then piecewise regressions within valence bins (positive, negative,
+    neutral) to test whether encoding predictions track arousal
+    differently across emotional contexts.
+
+Design Principles:
+    - MATLAB ``fitlme`` with no grouping → equivalent to OLS per subject
+    - We use ``statsmodels.OLS`` (same result, simpler API)
+    - Piecewise regressions: three valence bins tested independently
+    - ANOVA on subregion betas via ``scipy`` / ``pingouin``
+
+MATLAB Correspondence:
+    - perform_regression_IAPS_OASIS.m → ``fit_per_subject_regression()``
 """
 
 from __future__ import annotations

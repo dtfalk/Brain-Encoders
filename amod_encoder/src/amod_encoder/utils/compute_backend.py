@@ -1,15 +1,19 @@
 """
-Compute backend selection: CPU (numpy/sklearn) vs Torch (GPU-capable).
+Compute Backend Selection
+=========================
 
-This module corresponds to AMOD script(s): (none — MATLAB is CPU-only)
-Key matched choices:
-  - Default CPU backend matches MATLAB numerical behavior exactly
-  - Torch backend provides optional GPU acceleration
-Assumptions / deviations:
-  - Torch PLS is not straightforward; only Ridge is accelerated on GPU
-  - If torch backend is selected but PLS model is used, we fall back to CPU
-    with a loud warning
-  - AMP (mixed precision) only affects torch ridge; disabled by default
+Abstracts CPU (numpy / sklearn) and GPU (PyTorch) execution paths so that
+the rest of the pipeline is hardware-agnostic.
+
+Design Principles:
+    - Default ``cpu`` backend reproduces MATLAB numerical behaviour exactly
+    - ``torch`` backend provides optional GPU acceleration for Ridge models
+    - PLS on GPU is not straightforward; the backend falls back to CPU with
+      a loud warning when PLS + torch is requested
+    - AMP (mixed precision) only applies to the torch Ridge path
+
+MATLAB Correspondence:
+    - MATLAB is CPU-only; this module is a pure extension
 """
 
 from __future__ import annotations

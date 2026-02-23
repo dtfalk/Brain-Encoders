@@ -1,19 +1,19 @@
 """
-Write voxelwise t-maps as NIfTI images.
+Voxelwise T-Map Writer
+======================
 
-This module corresponds to AMOD script(s):
-  - write_voxelwise_tmaps_IAPS_OASIS.m
-  - make_parametric_map_amygdala.m
-Key matched choices:
-  - Load IAPS and OASIS correlation NIfTI maps
-  - Fisher Z transform, average across datasets
-  - Group-level t-test, threshold (uncorrected or FDR)
-  - Write resulting t-map as NIfTI
-Assumptions / deviations:
-  - MATLAB uses CanlabCore's fmri_data/statistic_image objects;
-    we construct NIfTI images directly with nibabel
-  - Thresholding: MATLAB uses .05 UNC for tmaps, FDR q<.05 for parametric maps
-  - NIfTI writing follows standard nibabel conventions
+Computes group-level t-maps from encoding-model correlations and writes
+them as NIfTI images for visualisation in standard neuroimaging tools.
+
+Design Principles:
+    - Fisher’s Z transform → average across datasets → group t-test
+    - Thresholding: uncorrected p < .05 or FDR q < .05
+    - Output is a standard NIfTI volume, viewable in FSLeyes / MRIcroGL
+    - ``nibabel`` replaces MATLAB CanlabCore ``statistic_image`` objects
+
+MATLAB Correspondence:
+    - write_voxelwise_tmaps_IAPS_OASIS.m → ``write_voxelwise_tmap()``
+    - make_parametric_map_amygdala.m → ``write_parametric_map()``
 """
 
 from __future__ import annotations
