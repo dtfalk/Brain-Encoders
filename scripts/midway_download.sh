@@ -1,29 +1,33 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ==============================================================================
-# Fast parallel data download for Midway3
-# Repo:  /project/hcn1/dtfalk/Brain-Encoders
-# Data:  /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/
+# Downloads all data for Jang & Kragel 2024 replication.
+# Must run on a LOGIN NODE (compute nodes have no internet).
 #
-# Usage (from login node):
+# Usage (from Brain-Encoders root):
 #   bash scripts/midway_download.sh
 #
-# Or submit as a batch job so you can disconnect:
-#   sbatch --partition=hcn1 --cpus-per-task=8 --mem=16G --time=12:00:00 \
-#          --job-name=dl-data scripts/midway_download.sh
+# To run in background so you can disconnect (use tmux or nohup):
+#   nohup bash scripts/midway_download.sh > logs/download.log 2>&1 &
+#   # or
+#   tmux new -s download 'bash scripts/midway_download.sh'
 # ==============================================================================
-#SBATCH --output=logs/download_%j.log
-#SBATCH --error=logs/download_%j.log
 set -euo pipefail
 
-REPO="/project/hcn1/dtfalk/Brain-Encoders"
-DATA="$REPO/amod_encoder/data"
-TOOLS="$REPO/tools"
-NJOBS=8
+# ── Env ──
+module load python/miniforge-25.3.0
+eval "$($CONDA_EXE shell.bash hook)"
+conda activate brain-encoders
 
-mkdir -p "$DATA" "$TOOLS" "$REPO/logs"
+# Script is run from Brain-Encoders/ root
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DATA="$PROJECT_ROOT/amod_encoder/data"
+TOOLS="$PROJECT_ROOT/tools"
+NJOBS=6    # keep modest on login node — don't hog shared resources
+
+mkdir -p "$DATA" "$TOOLS" "$PROJECT_ROOT/logs"
+export PYTHONUNBUFFERED=1
 
 # ── AWS CLI tuning: max throughput ──
-export AWS_MAX_CONCURRENT_REQUESTS=50
 aws configure set default.s3.max_concurrent_requests 50
 aws configure set default.s3.multipart_chunksize 64MB
 
@@ -67,13 +71,12 @@ echo ""
 # STEP 2 — OSF r48gc  (fc7 features + IAPS/OASIS CSVs)
 # ══════════════════════════════════════════════════════════════
 echo "━━━ [2/6] OSF project r48gc ━━━"
-pip install --user osfclient 2>/dev/null || true
 
 OSF_TMP="$DATA/.osf_r48gc"
 mkdir -p "$OSF_TMP"
 cd "$OSF_TMP"
 osf -p r48gc clone . 2>&1 | tail -5 || echo "  ⚠ osfclient clone failed — try manual download from https://osf.io/r48gc/"
-cd "$REPO"
+cd "$PROJECT_ROOT"
 
 # Move files to proper locations
 mkdir -p "$DATA/features" "$DATA/ratings"
@@ -98,7 +101,7 @@ echo "━━━ [3/6] OASIS stimulus images ━━━"
 mkdir -p "$DATA/stimuli/oasis"
 cd "$DATA/stimuli/oasis"
 osf -p 3mfps clone . 2>&1 | tail -3 || echo "  ⚠ Try: wget -O OASIS.zip https://osf.io/3mfps/download && unzip OASIS.zip"
-cd "$REPO"
+cd "$PROJECT_ROOT"
 echo ""
 
 # ══════════════════════════════════════════════════════════════
@@ -158,10 +161,10 @@ for sid in $(seq 1 20); do
 done
 
 echo ""
-echo "Features:  $(ls "$DATA/features/"*.mat 2>/dev/null | wc -l) .mat files"
-echo "Ratings:   $(ls "$DATA/ratings/"*.csv 2>/dev/null | wc -l) .csv files"
-echo "Canlab:    $(ls "$DATA/masks/canlab2018/"*.nii* 2>/dev/null | wc -l) masks"
-echo "Glasser:   $(ls "$DATA/masks/glasser/"*.nii* 2>/dev/null | wc -l) masks"
+echo "Features:  $(find "$DATA/features" -name "*.mat" 2>/dev/null | wc -l) .mat files"
+echo "Ratings:   $(find "$DATA/ratings" -name "*.csv" 2>/dev/null | wc -l) .csv files"
+echo "Canlab:    $(find "$DATA/masks/canlab2018" -name "*.nii*" 2>/dev/null | wc -l) masks"
+echo "Glasser:   $(find "$DATA/masks/glasser" -name "*.nii*" 2>/dev/null | wc -l) masks"
 echo ""
 echo "Disk usage:"
 du -sh "$DATA"/* 2>/dev/null
@@ -169,7 +172,6 @@ echo ""
 echo "Subjects OK: $ok   Missing: $missing"
 echo ""
 echo "════════════════════════════════════════════════════════"
-echo "  DONE. Next:"
-echo "    cd $REPO"
-echo "    amod-encoder fit -c configs/cluster/amygdala.yaml"
+echo "  DONE."
+echo "  Next:  cd $PROJECT_ROOT/amod_encoder && sbatch scripts/submit.sh"
 echo "════════════════════════════════════════════════════════"

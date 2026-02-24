@@ -1,11 +1,12 @@
 # =============================================================================
 # CLUSTER CONFIG — inferotemporal cortex, Midway3 hcn1 (4× L40S)
+# All paths relative to amod_encoder/ (submit.sh cd's there).
 # =============================================================================
 
 paths:
-  bids_root:   /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/NNDb_ds002837
-  osf_fc7_mat: /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/features/500_days_of_summer_fc7_features.mat
-  output_dir:  /project/hcn1/dtfalk/Brain-Encoders/results/inferotemporal
+  bids_root:   data/NNDb_ds002837
+  osf_fc7_mat: data/features/500_days_of_summer_fc7_features.mat
+  output_dir:  ../results/inferotemporal
 
 subjects:
   - "1"
@@ -31,7 +32,7 @@ subjects:
 
 roi:
   - name: itcortex
-    mask_path: /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/masks/glasser/glasser_IT_combined.nii.gz
+    mask_path: data/masks/glasser/glasser_IT_combined.nii.gz
     atlas: glasser
 
 features:

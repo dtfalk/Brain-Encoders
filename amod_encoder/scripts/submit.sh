@@ -4,8 +4,7 @@
 # Cluster: Midway3, partition hcn1-gpu, node midway3-0427
 # Node:    4× L40S (48 GB VRAM each), 32 CPU cores, 1 TB RAM
 #
-# Usage:
-#   # Run all 4 pipeline stages sequentially (one job each):
+# Usage (run from Brain-Encoders/amod_encoder/):
 #   sbatch --export=STAGE=amygdala,STEP=fit     scripts/submit.sh
 #   sbatch --export=STAGE=amygdala,STEP=eval    scripts/submit.sh
 #   sbatch --export=STAGE=amygdala,STEP=iaps    scripts/submit.sh
@@ -20,42 +19,43 @@
 
 #SBATCH --job-name=amod-encoder
 #SBATCH --partition=hcn1-gpu
-#SBATCH --account=hcn1
+#SBATCH --account=pi-hcn1
 #SBATCH --qos=hcn1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=200G
 #SBATCH --time=08:00:00
-#SBATCH --output=/project/hcn1/dtfalk/Brain-Encoders/logs/amod_%j_%x.out
-#SBATCH --error=/project/hcn1/dtfalk/Brain-Encoders/logs/amod_%j_%x.err
+#SBATCH --output=logs/amod_%j_%x.out
+#SBATCH --error=logs/amod_%j_%x.err
 #SBATCH --mail-type=END,FAIL
-# #SBATCH --mail-user=your@email.uchicago.edu   # uncomment to get email notifications
+# #SBATCH --mail-user=your@email.uchicago.edu
 
 # --------------------------------------------------------------------------
-# Environment
+# Environment (matches node-reference-code pattern)
 # --------------------------------------------------------------------------
-module purge
 module load cuda/12.6
 module load python/miniforge-25.3.0
 
-conda activate amod-encoder
+eval "$($CONDA_EXE shell.bash hook)"
+conda activate brain-encoders
 
-# Project root on Lustre
-PROJECT_ROOT="/project/hcn1/dtfalk/Brain-Encoders"
-cd "$PROJECT_ROOT/amod_encoder"
+# SLURM_SUBMIT_DIR = directory where sbatch was invoked (amod_encoder/)
+SCRIPT_DIR="${SLURM_SUBMIT_DIR}"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Ensure log dir exists
-mkdir -p /project/hcn1/dtfalk/Brain-Encoders/logs
-
-# Env vars for performance
+export TORCH_HOME="${PROJECT_ROOT}/amod_encoder/data/emonet_weights"
 export PYTHONUNBUFFERED=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export OMP_NUM_THREADS=8           # 32 cores / 4 GPUs = 8 per GPU worker
+export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
 export NUMEXPR_NUM_THREADS=8
-
-# joblib loky needs this on some Linux kernels to avoid /dev/shm issues
 export JOBLIB_TEMP_FOLDER=/tmp
+
+# --------------------------------------------------------------------------
+# Working dir
+# --------------------------------------------------------------------------
+cd "$SCRIPT_DIR"
+mkdir -p logs
 
 # --------------------------------------------------------------------------
 # Defaults

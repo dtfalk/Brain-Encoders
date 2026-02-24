@@ -6,15 +6,16 @@
 #   compute.n_workers = 20   → all 20 subjects run in parallel (5 per GPU)
 #   compute.gpu_ids   = [0,1,2,3]  → round-robin across 4× L40S (48 GB each)
 #   compute.pin_memory = true       → faster host→device transfers
-#   paths.*            → /project Lustre paths on Midway3
+#
+# All paths are relative to amod_encoder/ (submit.sh cd's there).
 # =============================================================================
 
 paths:
-  bids_root:    /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/NNDb_ds002837
-  osf_fc7_mat:  /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/features/500_days_of_summer_fc7_features.mat
-  output_dir:   /project/hcn1/dtfalk/Brain-Encoders/results/amygdala
-  iaps_csv:     /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/ratings/IAPS_data_amygdala_z.csv
-  oasis_csv:    /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/ratings/OASIS_data_amygdala_z.csv
+  bids_root:    data/NNDb_ds002837
+  osf_fc7_mat:  data/features/500_days_of_summer_fc7_features.mat
+  output_dir:   ../results/amygdala
+  iaps_csv:     data/ratings/IAPS_data_amygdala_z.csv
+  oasis_csv:    data/ratings/OASIS_data_amygdala_z.csv
 
 subjects:
   - "1"
@@ -40,7 +41,7 @@ subjects:
 
 roi:
   - name: amygdala
-    mask_path: /project/hcn1/dtfalk/Brain-Encoders/amod_encoder/data/masks/canlab2018/canlab2018_amygdala_combined.nii.gz
+    mask_path: data/masks/canlab2018/canlab2018_amygdala_combined.nii.gz
     atlas: canlab2018
 
 features:
