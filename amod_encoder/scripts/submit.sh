@@ -20,14 +20,14 @@
 
 #SBATCH --job-name=amod-encoder
 #SBATCH --partition=hcn1-gpu
-#SBATCH --account=pi-hcn1
+#SBATCH --account=hcn1
 #SBATCH --qos=hcn1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=200G
 #SBATCH --time=08:00:00
-#SBATCH --output=/project/pi-hcn1/logs/amod_%j_%x.out
-#SBATCH --error=/project/pi-hcn1/logs/amod_%j_%x.err
+#SBATCH --output=/project/hcn1/dtfalk/Brain-Encoders/logs/amod_%j_%x.out
+#SBATCH --error=/project/hcn1/dtfalk/Brain-Encoders/logs/amod_%j_%x.err
 #SBATCH --mail-type=END,FAIL
 # #SBATCH --mail-user=your@email.uchicago.edu   # uncomment to get email notifications
 
@@ -41,11 +41,11 @@ module load python/miniforge-25.3.0
 conda activate amod-encoder
 
 # Project root on Lustre
-PROJECT_ROOT="/project/pi-hcn1/amod-encoder"
+PROJECT_ROOT="/project/hcn1/dtfalk/Brain-Encoders"
 cd "$PROJECT_ROOT/amod_encoder"
 
 # Ensure log dir exists
-mkdir -p /project/pi-hcn1/logs
+mkdir -p /project/hcn1/dtfalk/Brain-Encoders/logs
 
 # Env vars for performance
 export PYTHONUNBUFFERED=1
