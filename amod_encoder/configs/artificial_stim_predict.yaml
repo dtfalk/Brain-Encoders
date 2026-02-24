@@ -1,0 +1,103 @@
+# =============================================================================
+# ARTIFICIAL STIMULI PREDICTION & DECODE  (Jang & Kragel 2024, Figures 5 & 6)
+# MATLAB equivalent: predict_activations_artificial_stim_amygdala.m
+#                    predict_activations_artificial_stim_subregion.m
+#                    decode_activation_targets_artificial_stim.m
+#                    perform_ttest_artificial_stim_subregion.m
+#
+# PREREQUISITES — run these configs first in this order:
+#   1. replication_amygdala.yaml          → results\amygdala
+#   2. replication_subregions.yaml        → results\subregions
+#   3. replication_visual_cortex.yaml     → results\visual_cortex
+#   4. replication_inferotemporal.yaml    → results\inferotemporal
+#   Then: amod-encoder export-betas for ALL four configs
+#   Then: run scripts\run_actmax.ps1 (generates the PNG images)
+#
+# HOW TO GET ACTMAX:
+#   git clone https://github.com/Animadversio/ActMax-Optimizer-Dev.git data\ActMax
+#
+# ACTMAX MODELS NEEDED:
+#   data\ActMax\weights\DGN_weights\        ← deep generator network
+#   data\ActMax\weights\emonet_weights\     ← EmoNet (netTransfer_20cat)
+#   See: https://osf.io/r48gc/  (same OSF project as the fc7 .mat)
+#   Ask original authors for pretrained weights if not on OSF.
+#
+# After scripts\run_actmax.ps1 finishes, the generated images land in:
+#   results\artificial_stim\{roi}\sub-{s}\     (structure set in run_actmax.ps1)
+# =============================================================================
+
+paths:
+  # Directory containing all encoding model results (betas subdirs)
+  results_root: results
+
+  # ActMax output: one folder per ROI, PNG files inside
+  # Expected structure: artificial_stim\{roi}\emonet_fc7_sub{s}_{roi}_run*.png
+  artif_stim_dir: results\artificial_stim
+
+  # Output for this decode step
+  output_dir: results\artificial_stim_decode
+
+subjects:
+  - "1"
+  - "2"
+  - "3"
+  - "4"
+  - "5"
+  - "6"
+  - "7"
+  - "8"
+  - "9"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+
+# ROIs to evaluate (must all have betas exported under results_root)
+eval_rois:
+  - amygdala
+  - AStr
+  - CM
+  - LB
+  - SF
+  - visual_cortex      # VC
+  - itcortex           # IT — 9 stim/subject, 160 total
+
+# Expected stimuli per subject per ROI (paper: 4-5 per ROI, 9 for IT)
+stim_per_subject:
+  default: 5
+  itcortex: 9
+
+decode:
+  # PLS discriminant analysis (MATLAB: plsregress(Y, X, 7))
+  n_pls_components: 7
+
+  # 5-fold CV on subjects for generalization
+  cv_scheme: kfold
+  n_folds: 5
+  seed: 42
+
+  # t-SNE visualisation
+  tsne_perplexity: 30
+  tsne_n_iter: 1000
+
+  # Clustering (hierarchical, max discriminable clusters)
+  max_clusters: 7       # 7 ROIs: amy, IT, VC, AStr, CM, LB, SF
+
+# Low-level visual feature extraction matches get_color_spectral_IAPS_OASIS.m
+visual_features:
+  image_size: [227, 227]             # resize before feature extraction
+  low_freq_radius_px: 6              # FFT radius threshold (paper text)
+  high_freq_radius_px: 24             # FFT radius threshold (paper text)
+  color_channels: [red, green, blue]
+
+compute:
+  backend: torch
+  device: cuda
+  amp: false

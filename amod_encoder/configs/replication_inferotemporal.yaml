@@ -1,0 +1,87 @@
+# =============================================================================
+# REPLICATION CONFIG — inferotemporal cortex  (Jang & Kragel 2024, Figure 6)
+# MATLAB equivalent: predict_activations_artificial_stim_amygdala.m  (roi 'it')
+#                    decode_activation_targets_artificial_stim.m
+#
+# IT cortex is used as a control target for artificial stimulus generation.
+# The paper generates 9 stimuli/subject for IT (vs 4-5 for other ROIs),
+# resulting in 160 total IT stimuli vs 80 for each amygdala ROI.
+#
+# Run order:
+#   1.  amod-encoder fit      -c configs/replication_inferotemporal.yaml
+#   2.  amod-encoder eval     -c configs/replication_inferotemporal.yaml
+#   3.  amod-encoder export-betas -c configs/replication_inferotemporal.yaml
+#
+# Glasser atlas parcels for IT cortex (bilateral TE1a, TE1m, TE2a, TE2p, TF):
+#   data\masks\glasser_TE1a.nii.gz
+#   data\masks\glasser_TE1m.nii.gz
+#   data\masks\glasser_TE2a.nii.gz
+#   data\masks\glasser_TE2p.nii.gz
+#   data\masks\glasser_TF.nii.gz
+#
+# Alternatively, use a pre-merged IT mask if available from the original authors.
+# =============================================================================
+
+paths:
+  bids_root:   data\NNDb_ds002837
+  osf_fc7_mat: data\features\500_days_of_summer_fc7_features.mat
+  output_dir:  results\inferotemporal
+
+subjects:
+  - "1"
+  - "2"
+  - "3"
+  - "4"
+  - "5"
+  - "6"
+  - "7"
+  - "8"
+  - "9"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+
+roi:
+  - name: itcortex
+    # Merge these parcels if needed:
+    #   mask_paths: [TE1a, TE1m, TE2a, TE2p, TF]
+    # For now, a single pre-merged NIfTI is assumed.
+    mask_path: data\masks\glasser\glasser_IT_combined.nii.gz
+    atlas: glasser
+
+features:
+  type: fc7
+  n_features: 4096
+  frame_sampling: 5
+  align_method: resample_poly
+  zscore: false
+  convolution_order: resample_then_convolve
+
+hrf:
+  model: spm_canonical
+  dt: 1.0
+
+model:
+  type: pls
+  pls_n_components: 20
+  standardize_X: false
+  standardize_Y: false
+  mode: voxelwise
+
+cv:
+  scheme: kfold
+  n_folds: 5
+  seed: 42
+
+compute:
+  backend: torch
+  device: cuda
+  amp: false

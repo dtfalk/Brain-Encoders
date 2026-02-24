@@ -27,7 +27,6 @@ MATLAB Correspondence:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -81,7 +80,7 @@ def predict_artificial_stim(
     N_subjects = len(subject_ids)
 
     first_betas = next(iter(betas_per_subject.values()))
-    V = first_betas.shape[1] if first_betas.ndim > 1 else 1
+    _n_voxels = first_betas.shape[1] if first_betas.ndim > 1 else 1  # noqa: F841
 
     betas_stack = np.stack([betas_per_subject[s] for s in subject_ids], axis=0)
 
@@ -166,8 +165,8 @@ def decode_activation_targets(
     for i, r in enumerate(roi_labels):
         Y_indicator[i, roi_to_idx[r]] = 1.0
 
-    # Z-score indicator columns
-    Y_z = stats.zscore(Y_indicator, axis=0, ddof=0)
+    # Z-score indicator columns (MATLAB zscore uses N-1 denominator = ddof=1)
+    Y_z = stats.zscore(Y_indicator, axis=0, ddof=1)
 
     # Leave-one-subject-out CV
     unique_subjects = np.unique(subject_labels)

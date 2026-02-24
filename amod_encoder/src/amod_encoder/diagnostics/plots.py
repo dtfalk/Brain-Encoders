@@ -38,9 +38,8 @@ Author: Brain-Encoders Project
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend for Slurm compatibility
@@ -501,9 +500,9 @@ def plot_piecewise_regression(
     colors = [ACCENT6, "#8b949e", ACCENT3]  # red, gray, green
 
     fig, ax = plt.subplots(figsize=(6, 4.5))
-    bars = ax.bar(categories, betas, yerr=ses, capsize=5,
-                  color=colors[:len(categories)], alpha=0.8,
-                  edgecolor="#30363d", linewidth=0.8)
+    _bars = ax.bar(categories, betas, yerr=ses, capsize=5,
+                   color=colors[:len(categories)], alpha=0.8,
+                   edgecolor="#30363d", linewidth=0.8)
 
     # Significance markers
     for i, p in enumerate(pvals):
@@ -562,8 +561,8 @@ def plot_on_target_selectivity(
     colors = [_get_roi_color(r) for r in rois]
 
     fig, ax = plt.subplots(figsize=(max(6, len(rois) * 1.5), 5))
-    bars = ax.bar(rois, betas, yerr=ses, capsize=5,
-                  color=colors, alpha=0.8, edgecolor="#30363d", linewidth=0.8)
+    _bars = ax.bar(rois, betas, yerr=ses, capsize=5,
+                   color=colors, alpha=0.8, edgecolor="#30363d", linewidth=0.8)
 
     for i, p in enumerate(pvals):
         if p < 0.001:

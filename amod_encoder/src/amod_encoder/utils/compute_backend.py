@@ -35,6 +35,26 @@ _torch = None
 _TORCH_AVAILABLE: bool | None = None
 
 
+def get_device_for_worker(worker_idx: int, gpu_ids: list[int]) -> str:
+    """Map worker index to a CUDA device string for multi-GPU subject parallelism.
+
+    Parameters
+    ----------
+    worker_idx : int
+        0-based worker index (joblib passes this via the call order).
+    gpu_ids : list[int]
+        List of GPU device IDs to round-robin across. Empty → 'cuda'.
+
+    Returns
+    -------
+    str
+        'cpu', 'cuda', or 'cuda:N'.
+    """
+    if not gpu_ids:
+        return "cuda"
+    return f"cuda:{gpu_ids[worker_idx % len(gpu_ids)]}"
+
+
 def _check_torch() -> bool:
     """Lazily check if torch is importable."""
     global _torch, _TORCH_AVAILABLE

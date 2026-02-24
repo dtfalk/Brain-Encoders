@@ -19,7 +19,6 @@ MATLAB Correspondence:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import nibabel as nib
 import numpy as np
@@ -136,9 +135,9 @@ def average_and_ttest_correlation_maps(
     Parameters
     ----------
     iaps_data : np.ndarray, shape (N_subjects, N_voxels)
-        Fisher Z-transformed IAPS correlation data.
+        Raw Pearson correlation data for IAPS images (before Fisher Z).
     oasis_data : np.ndarray, shape (N_subjects, N_voxels)
-        Fisher Z-transformed OASIS correlation data.
+        Raw Pearson correlation data for OASIS images (before Fisher Z).
     mask_img : nib.Nifti1Image
         Mask image.
     voxel_indices : np.ndarray
@@ -165,7 +164,9 @@ def average_and_ttest_correlation_maps(
         f"Averaging IAPS+OASIS for '{output_prefix}' and computing t-map",
     )
 
-    # Average Fisher Z-transformed data
+    # Average Fisher Z-transformed data.
+    # MATLAB write_voxelwise_tmaps_IAPS_OASIS.m applies atanh() to raw r-values
+    # loaded from NIfTIs before averaging. Inputs here are raw Pearson correlations.
     avg_data = (fishers_z(iaps_data) + fishers_z(oasis_data)) / 2.0
 
     output_path = output_dir / f"voxelwise_correlations_{output_prefix}.nii.gz"

@@ -24,7 +24,6 @@ Command ↔ MATLAB Mapping::
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -64,7 +63,7 @@ def extract_features_cmd(
     from amod_encoder.stimuli.extractors.registry import create_extractor_from_features_config
     from amod_encoder.utils.logging import get_logger
 
-    logger = get_logger(__name__)
+    _logger = get_logger(__name__)
     cfg = load_config(config)
 
     extractor = create_extractor_from_features_config(cfg.features, cfg.paths)
@@ -110,10 +109,10 @@ def fit(
     loads BOLD data → applies ROI mask → fits PLS/Ridge model →
     runs cross-validation → saves betas + metrics.
     """
-    from amod_encoder.config import load_config, build_provenance, save_config_snapshot
+    from amod_encoder.config import load_config, build_provenance
     from amod_encoder.utils.logging import get_logger
 
-    logger = get_logger(__name__)
+    _logger = get_logger(__name__)
     cfg = load_config(config)
 
     if subjects:
@@ -132,6 +131,169 @@ def fit(
     _run_fit(cfg, provenance)
 
 
+def _fit_one_subject(
+    s_id: str,
+    worker_idx: int,
+    cfg,
+    fc7,
+    provenance: dict,
+    device_str: str,
+) -> list[str]:
+    """Process a single subject (may run in a joblib worker).
+
+    Returns a list of result summary strings for the caller to print.
+    """
+    import json
+    import numpy as np
+
+    from amod_encoder.data.bids_dataset import get_bold_path, load_bold_data
+    from amod_encoder.data.roi import apply_mask, load_mask, mean_roi_timeseries
+    from amod_encoder.eval.metrics import cross_validated_correlation
+    from amod_encoder.eval.splits import generate_cv_splits
+    from amod_encoder.io.artifacts import save_model_artifacts
+    from amod_encoder.models.pls import PLSEncodingModel
+    from amod_encoder.models.ridge import RidgeEncodingModel
+    from amod_encoder.stimuli.align import align_features_to_trs
+    from amod_encoder.stimuli.hrf import convolve_features_with_hrf
+    from amod_encoder.utils.compute_backend import ComputeBackend
+    from amod_encoder.utils.logging import get_logger
+
+    logger = get_logger(__name__)
+    lines: list[str] = []
+
+    # Build compute backend for this worker's assigned device
+    compute = ComputeBackend(cfg.compute.backend, device_str, cfg.compute.amp)
+
+    # Build model kwargs — ComputeBackend is created fresh per worker so Ridge is safe
+    if cfg.model.type == "pls":
+        model_class = PLSEncodingModel
+        n_comp = cfg.model.pls_n_components if isinstance(cfg.model.pls_n_components, int) else 20
+        model_kwargs: dict = {
+            "n_components": n_comp,
+            "standardize_X": cfg.model.standardize_X,
+            "standardize_Y": cfg.model.standardize_Y,
+        }
+        # GPU device for SIMPLS SVD (only relevant when backend=torch + device=cuda*)
+        pls_fit_device: str | None = device_str if compute.is_gpu else None
+    else:
+        model_class = RidgeEncodingModel
+        model_kwargs = {
+            "alpha": cfg.model.ridge_alpha,
+            "standardize_X": cfg.model.standardize_X,
+            "standardize_Y": cfg.model.standardize_Y,
+            "compute": compute,
+        }
+        pls_fit_device = None
+
+    # Load BOLD
+    try:
+        bold_path = get_bold_path(cfg.paths.bids_root, s_id)
+        bold_data, bold_img = load_bold_data(bold_path)
+    except FileNotFoundError as e:
+        logger.error("Subject %s: %s — skipping", s_id, e)
+        return [f"[yellow]SKIP {s_id}: {e}[/yellow]"]
+
+    n_trs = bold_data.shape[3]
+
+    # Determine feature alignment order
+    conv_order = getattr(cfg.features, "convolution_order", "resample_then_convolve")
+    if conv_order == "convolve_then_resample":
+        convolved_features = convolve_features_with_hrf(
+            fc7, fc7.shape[0], cfg.hrf.model, cfg.hrf.dt
+        )
+        timematched_features = align_features_to_trs(
+            convolved_features, n_trs, cfg.features.align_method
+        )
+    else:
+        aligned_features = align_features_to_trs(
+            fc7, n_trs, cfg.features.align_method
+        )
+        timematched_features = convolve_features_with_hrf(
+            aligned_features, n_trs, cfg.hrf.model, cfg.hrf.dt
+        )
+
+    if cfg.features.zscore:
+        from scipy.stats import zscore as _zscore
+        timematched_features = _zscore(timematched_features, axis=0, ddof=1)
+        timematched_features = np.nan_to_num(timematched_features)
+
+    for roi_cfg in cfg.roi:
+        try:
+            mask_img = load_mask(roi_cfg.mask_path)
+            masked = apply_mask(bold_data, bold_img, mask_img, roi_cfg.name)
+        except Exception as e:
+            logger.error("ROI %s: %s — skipping", roi_cfg.name, e)
+            continue
+
+        if cfg.model.mode == "roi_mean":
+            Y = mean_roi_timeseries(masked).reshape(-1, 1)
+        else:
+            Y = masked.data.T  # (T, V)
+
+        X = timematched_features
+
+        # Full fit for betas
+        full_model = model_class(**model_kwargs)
+        if pls_fit_device is not None and hasattr(full_model, "fit"):
+            # PLS: pass device for GPU SVD
+            full_model.fit(X, Y, device=pls_fit_device)  # type: ignore[call-arg]
+        else:
+            full_model.fit(X, Y)
+
+        # CV — pass device to each fold's model too
+        _cv_model_kwargs = model_kwargs.copy()
+        if pls_fit_device is not None and "compute" not in _cv_model_kwargs:
+            _cv_model_kwargs["_pls_device"] = pls_fit_device  # handled in cross_validated_correlation
+
+        cv_gen = generate_cv_splits(
+            n_samples=X.shape[0],
+            scheme=cfg.cv.scheme,
+            n_folds=cfg.cv.n_folds,
+            seed=cfg.cv.seed,
+        )
+        cv_results = cross_validated_correlation(X, Y, model_class, model_kwargs, cv_gen)
+
+        mean_z = float(np.nanmean(np.arctanh(np.clip(
+            cv_results["mean_diag_corr"], -0.9999, 0.9999
+        ))))
+        metrics = {
+            "mean_voxelwise_corr": float(cv_results["mean_corr_scalar"]),
+            "mean_diag_corr": cv_results["mean_diag_corr"].tolist()
+            if cv_results["mean_diag_corr"].size <= 1000
+            else f"<array of {cv_results['mean_diag_corr'].size} values>",
+            "n_active_voxels": masked.n_active_voxels,
+            "n_trs": masked.n_trs,
+            "model_type": cfg.model.type,
+            "n_components": model_kwargs.get("n_components", None),
+            "cv_folds": cfg.cv.n_folds,
+            "mean_fishers_z": mean_z,
+        }
+
+        config_snap = json.loads(cfg.model_dump_json())
+        save_model_artifacts(
+            output_dir=cfg.paths.output_dir,
+            subject_id=s_id,
+            roi_name=roi_cfg.name,
+            betas=full_model.betas,
+            intercept=full_model.intercept,
+            voxel_indices=masked.voxel_indices,
+            metrics=metrics,
+            provenance=provenance,
+            config_snapshot=config_snap,
+            extra={
+                "mean_diag_corr": cv_results["mean_diag_corr"],
+                "diag_corr": cv_results["diag_corr"],
+                "removed_voxels": masked.removed_voxels,
+            },
+        )
+        lines.append(
+            f"  sub-{s_id} / {roi_cfg.name} → r={cv_results['mean_corr_scalar']:.4f}  "
+            f"Z={mean_z:.4f}  V={masked.n_active_voxels}  [{device_str}]"
+        )
+
+    return lines
+
+
 def _run_fit(cfg, provenance: dict) -> None:
     """Core fit logic.
 
@@ -143,33 +305,24 @@ def _run_fit(cfg, provenance: dict) -> None:
     5. Fit encoding model (full data for betas)
     6. Run cross-validation for evaluation
     7. Save artifacts
-    """
-    from amod_encoder.config import save_config_snapshot
-    from amod_encoder.data.bids_dataset import (
-        discover_subjects,
-        get_bold_path,
-        load_bold_data,
-    )
-    from amod_encoder.data.roi import apply_mask, load_mask, mean_roi_timeseries
-    from amod_encoder.eval.metrics import cross_validated_correlation, fishers_z
-    from amod_encoder.eval.splits import generate_cv_splits
-    from amod_encoder.io.artifacts import save_model_artifacts
-    from amod_encoder.models.pls import PLSEncodingModel
-    from amod_encoder.models.ridge import RidgeEncodingModel
-    from amod_encoder.stimuli.align import align_features_to_trs
-    from amod_encoder.stimuli.extractors.registry import create_extractor_from_features_config
-    from amod_encoder.stimuli.hrf import convolve_features_with_hrf
-    from amod_encoder.utils.compute_backend import ComputeBackend
-    from amod_encoder.utils.logging import get_logger
 
-    import json
+    When cfg.compute.n_workers > 1, subjects are processed in parallel using
+    joblib (loky backend). Each worker is pinned to a GPU from cfg.compute.gpu_ids
+    via round-robin assignment. When n_workers <= 1, runs sequentially (identical
+    to the original behaviour).
+    """
     import numpy as np
+
+    from amod_encoder.data.bids_dataset import discover_subjects
+    from amod_encoder.stimuli.extractors.registry import create_extractor_from_features_config
+    from amod_encoder.utils.compute_backend import get_device_for_worker
+    from amod_encoder.utils.logging import get_logger
 
     logger = get_logger(__name__)
 
-    # Load features via the model-agnostic extractor system
+    # Load features once (shared across subjects)
     extractor = create_extractor_from_features_config(cfg.features, cfg.paths)
-    fc7 = extractor.load() if hasattr(extractor, 'load') else None
+    fc7 = extractor.load() if hasattr(extractor, "load") else None
     if fc7 is None:
         raise typer.BadParameter(
             "The 'fit' command requires pre-computed features (or use "
@@ -178,154 +331,52 @@ def _run_fit(cfg, provenance: dict) -> None:
     logger.info("Features loaded via %s: %s", extractor.name, fc7.shape)
 
     # Resolve subjects
-    if cfg.subjects == "all":
-        subject_ids = discover_subjects(cfg.paths.bids_root)
-    else:
-        subject_ids = cfg.subjects
+    subject_ids: list[str] = (
+        discover_subjects(cfg.paths.bids_root)
+        if cfg.subjects == "all"
+        else cfg.subjects
+    )
 
-    # Compute backend
-    compute = ComputeBackend(cfg.compute.backend, cfg.compute.device, cfg.compute.amp)
+    n_workers = cfg.compute.n_workers
+    gpu_ids = list(cfg.compute.gpu_ids)
 
-    # Build model kwargs
-    if cfg.model.type == "pls":
-        model_class = PLSEncodingModel
-        n_comp = cfg.model.pls_n_components if isinstance(cfg.model.pls_n_components, int) else 20
-        model_kwargs = {
-            "n_components": n_comp,
-            "standardize_X": cfg.model.standardize_X,
-            "standardize_Y": cfg.model.standardize_Y,
-        }
-    else:
-        model_class = RidgeEncodingModel
-        model_kwargs = {
-            "alpha": cfg.model.ridge_alpha,
-            "standardize_X": cfg.model.standardize_X,
-            "standardize_Y": cfg.model.standardize_Y,
-            "compute": compute,
-        }
-
-    for s_id in subject_ids:
-        console.print(f"\n[bold]Processing subject {s_id}[/bold]")
-
-        # Load BOLD data
+    if n_workers > 1:
+        # ── Parallel path ──────────────────────────────────────────────────────
         try:
-            bold_path = get_bold_path(cfg.paths.bids_root, s_id)
-            bold_data, bold_img = load_bold_data(bold_path)
-        except FileNotFoundError as e:
-            logger.error("Subject %s: %s — skipping", s_id, e)
-            continue
-
-        n_trs = bold_data.shape[3]
-
-        # Determine alignment order based on config
-        # develop_encoding_models_amygdala.m: resample → convolve → truncate
-        # develop_encoding_models_subregions.m: convolve → truncate → resample
-        conv_order = getattr(cfg.features, 'convolution_order', 'resample_then_convolve')
-
-        if conv_order == "convolve_then_resample":
-            # Subregions path: convolve raw fc7 features first, then resample
-            convolved_features = convolve_features_with_hrf(
-                fc7, fc7.shape[0], cfg.hrf.model, cfg.hrf.dt
-            )
-            timematched_features = align_features_to_trs(
-                convolved_features, n_trs, cfg.features.align_method
-            )
-        else:
-            # Amygdala path (default): resample first, then convolve
-            aligned_features = align_features_to_trs(
-                fc7, n_trs, cfg.features.align_method
-            )
-            timematched_features = convolve_features_with_hrf(
-                aligned_features, n_trs, cfg.hrf.model, cfg.hrf.dt
-            )
-
-        # Optionally z-score features
-        if cfg.features.zscore:
-            from scipy.stats import zscore
-            timematched_features = zscore(timematched_features, axis=0, ddof=0)
-            timematched_features = np.nan_to_num(timematched_features)
-
-        for roi_cfg in cfg.roi:
-            console.print(f"  ROI: [cyan]{roi_cfg.name}[/cyan]")
-
-            # Load mask and extract voxel data
-            try:
-                mask_img = load_mask(roi_cfg.mask_path)
-                masked = apply_mask(bold_data, bold_img, mask_img, roi_cfg.name)
-            except Exception as e:
-                logger.error("ROI %s: %s — skipping", roi_cfg.name, e)
-                continue
-
-            # Y matrix: (T, V) — transpose of MATLAB's masked_dat.dat which is (V, T)
-            if cfg.model.mode == "roi_mean":
-                Y = mean_roi_timeseries(masked).reshape(-1, 1)  # (T, 1)
-                logger.info("ROI mean mode: Y shape = %s", Y.shape)
-            else:
-                Y = masked.data.T  # (T, V)
-                logger.info("Voxelwise mode: Y shape = %s", Y.shape)
-
-            X = timematched_features
-
-            # Fit model on full data (for saving betas)
-            full_model = model_class(**model_kwargs)
-            full_model.fit(X, Y)
-
-            # Cross-validation
-            cv_gen = generate_cv_splits(
-                n_samples=X.shape[0],
-                scheme=cfg.cv.scheme,
-                n_folds=cfg.cv.n_folds,
-                seed=cfg.cv.seed,
-            )
-            cv_results = cross_validated_correlation(
-                X, Y, model_class, model_kwargs, cv_gen
-            )
-
-            # Prepare metrics
-            metrics = {
-                "mean_voxelwise_corr": float(cv_results["mean_corr_scalar"]),
-                "mean_diag_corr": cv_results["mean_diag_corr"].tolist()
-                if cv_results["mean_diag_corr"].size <= 1000
-                else f"<array of {cv_results['mean_diag_corr'].size} values>",
-                "n_active_voxels": masked.n_active_voxels,
-                "n_trs": masked.n_trs,
-                "model_type": cfg.model.type,
-                "n_components": model_kwargs.get("n_components", None),
-                "cv_folds": cfg.cv.n_folds,
-            }
-
-            # Also compute Fisher's Z of mean_diag_corr
-            mean_z = float(np.nanmean(np.arctanh(np.clip(
-                cv_results["mean_diag_corr"], -0.9999, 0.9999
-            ))))
-            metrics["mean_fishers_z"] = mean_z
-
-            # Save config snapshot as dict
-            config_snap = json.loads(cfg.model_dump_json())
-
-            # Save artifacts
-            save_model_artifacts(
-                output_dir=cfg.paths.output_dir,
-                subject_id=s_id,
-                roi_name=roi_cfg.name,
-                betas=full_model.betas,
-                intercept=full_model.intercept,
-                voxel_indices=masked.voxel_indices,
-                metrics=metrics,
-                provenance=provenance,
-                config_snapshot=config_snap,
-                extra={
-                    "mean_diag_corr": cv_results["mean_diag_corr"],
-                    "diag_corr": cv_results["diag_corr"],
-                    "removed_voxels": masked.removed_voxels,
-                },
-            )
-
+            from joblib import Parallel, delayed
+        except ImportError:
             console.print(
-                f"    ✓ mean r = {cv_results['mean_corr_scalar']:.4f}, "
-                f"Fisher's Z = {mean_z:.4f}, "
-                f"V = {masked.n_active_voxels}"
+                "[yellow]joblib not installed — falling back to sequential.[/yellow]"
             )
+            n_workers = 1
+
+    if n_workers > 1:
+        console.print(
+            f"[bold cyan]Parallel mode:[/bold cyan] {n_workers} workers, "
+            f"GPU IDs: {gpu_ids or ['cuda (auto)']}"
+        )
+
+        def _worker(idx: int, s_id: str) -> list[str]:
+            dev = get_device_for_worker(idx, gpu_ids) if cfg.compute.backend == "torch" else "cpu"
+            return _fit_one_subject(s_id, idx, cfg, fc7, provenance, dev)
+
+        all_lines = Parallel(n_jobs=n_workers, backend="loky", verbose=0)(
+            delayed(_worker)(i, s_id) for i, s_id in enumerate(subject_ids)
+        )
+        for subject_lines in (all_lines or []):
+            for line in (subject_lines or []):
+                console.print(line)
+    else:
+        # ── Sequential path (original behaviour) ───────────────────────────────
+        for i, s_id in enumerate(subject_ids):
+            console.print(f"\n[bold]Processing subject {s_id}[/bold]")
+            dev = (
+                get_device_for_worker(i, gpu_ids)
+                if cfg.compute.backend == "torch" and gpu_ids
+                else cfg.compute.device
+            )
+            for line in _fit_one_subject(s_id, i, cfg, fc7, provenance, dev):
+                console.print(line)
 
     console.print("\n[bold green]Fit complete.[/bold green]")
 
@@ -343,8 +394,8 @@ def eval(
     from amod_encoder.config import load_config
     from amod_encoder.data.bids_dataset import discover_subjects
     from amod_encoder.eval.metrics import fishers_z
-    from amod_encoder.eval.stats_ttests import one_sample_ttest, voxelwise_ttest_with_fdr
-    from amod_encoder.io.artifacts import get_artifact_dir, load_model_artifacts
+    from amod_encoder.eval.stats_ttests import voxelwise_ttest_with_fdr
+    from amod_encoder.io.artifacts import get_artifact_dir
     from amod_encoder.utils.logging import get_logger
 
     import numpy as np
@@ -439,11 +490,9 @@ def predict_iaps_oasis_cmd(
     from amod_encoder.data.bids_dataset import discover_subjects
     from amod_encoder.io.artifacts import get_artifact_dir, load_model_artifacts
     from amod_encoder.io.export_betas import export_mean_betas_csv
-    from amod_encoder.predict.iaps_oasis import load_ratings_csv, predict_iaps_oasis
+    from amod_encoder.predict.iaps_oasis import load_ratings_csv
     from amod_encoder.utils.logging import get_logger
 
-    import numpy as np
-    import pandas as pd
 
     logger = get_logger(__name__)
     cfg = load_config(config)
@@ -459,7 +508,7 @@ def predict_iaps_oasis_cmd(
             logger.info("No %s CSV path configured; skipping %s predictions", csv_name, csv_name)
             continue
 
-        df = load_ratings_csv(csv_path_attr)
+        _df = load_ratings_csv(csv_path_attr)  # noqa: F841 — loaded for future fc7-based prediction
 
         for roi_cfg in cfg.roi:
             console.print(f"\n[bold]{csv_name} predictions for ROI: {roi_cfg.name}[/bold]")
@@ -475,7 +524,7 @@ def predict_iaps_oasis_cmd(
                     logger.warning("No betas for sub-%s / roi-%s", s_id, roi_cfg.name)
 
             if not betas_per_subject:
-                console.print(f"  [red]No betas found[/red]")
+                console.print("  [red]No betas found[/red]")
                 continue
 
             # TODO: In the full pipeline, we would extract fc7 features from
@@ -487,7 +536,6 @@ def predict_iaps_oasis_cmd(
             )
 
             # Export mean betas for each subject (useful for downstream analysis)
-            tables_dir = cfg.paths.output_dir / "tables"
             for s_id, betas in betas_per_subject.items():
                 export_mean_betas_csv(betas, s_id, roi_cfg.name, cfg.paths.output_dir)
 
@@ -512,7 +560,6 @@ def compile_atanh_cmd(
     """
     from amod_encoder.config import load_config
     from amod_encoder.data.bids_dataset import discover_subjects
-    from amod_encoder.eval.metrics import fishers_z
     from amod_encoder.io.atanh_matrix import (
         compute_subregion_membership,
         mask_atanh_by_subregions,
@@ -633,7 +680,7 @@ def validate(
     from amod_encoder.config import load_config
     from amod_encoder.data.bids_dataset import discover_subjects
     from amod_encoder.eval.metrics import fishers_z
-    from amod_encoder.io.artifacts import get_artifact_dir, load_model_artifacts
+    from amod_encoder.io.artifacts import get_artifact_dir
     from amod_encoder.utils.logging import get_logger
 
     import numpy as np
@@ -890,7 +937,7 @@ def _write_validation_report(
     if comparisons:
         lines.append("## Comparison Against Reference")
         lines.append("")
-        lines.append(f"Reference: Jang & Kragel (2024)")
+        lines.append("Reference: Jang & Kragel (2024)")
         lines.append("")
         lines.append("| ROI | Metric | Observed | Expected | Diff | Status |")
         lines.append("|-----|--------|----------|----------|------|--------|")
@@ -958,7 +1005,6 @@ def export_betas_cmd(
     from amod_encoder.io.export_betas import export_full_betas_csv, export_mean_betas_csv
     from amod_encoder.utils.logging import get_logger
 
-    import numpy as np
 
     logger = get_logger(__name__)
     cfg = load_config(config)

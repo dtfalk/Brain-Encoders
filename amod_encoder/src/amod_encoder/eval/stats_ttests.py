@@ -18,7 +18,6 @@ MATLAB Correspondence:
 
 from __future__ import annotations
 
-from typing import Optional
 
 import numpy as np
 from scipy import stats
@@ -203,17 +202,17 @@ def voxelwise_ttest_with_fdr(
     fdr_threshold = np.nan
     significant_fdr = np.zeros(atanh_matrix.shape[1], dtype=bool)
 
-    valid_p = p_values[valid & ~np.isnan(p_values)]
+    valid_p_mask = valid & ~np.isnan(p_values)
+    valid_p = p_values[valid_p_mask]
     if len(valid_p) > 0:
         from statsmodels.stats.multitest import fdrcorrection
 
         reject, _ = fdrcorrection(valid_p, alpha=q)
+        # Map reject decisions back to the full voxel array
+        significant_fdr[valid_p_mask] = reject
         # Find the FDR threshold (largest p that is still rejected)
         if reject.any():
             fdr_threshold = float(valid_p[reject].max())
-            significant_fdr[valid & ~np.isnan(p_values)] = p_values[
-                valid & ~np.isnan(p_values)
-            ] <= fdr_threshold
 
     result = {
         "t_stats": t_stats,

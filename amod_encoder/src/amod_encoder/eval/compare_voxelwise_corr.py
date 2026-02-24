@@ -25,8 +25,6 @@ MATLAB Correspondence:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from scipy import stats
@@ -72,9 +70,9 @@ def correlate_predictions_with_ratings(
         f"Correlating {enc_prediction.shape[1]} voxels with val/arousal/interaction",
     )
 
-    # Z-score valence and arousal (matching MATLAB zscore)
-    val_z = stats.zscore(valence, ddof=0)
-    arous_z = stats.zscore(arousal, ddof=0)
+    # Z-score valence and arousal (MATLAB zscore uses N-1 denominator = ddof=1)
+    val_z = stats.zscore(valence, ddof=1)
+    arous_z = stats.zscore(arousal, ddof=1)
     interaction_z = val_z * arous_z
 
     # Build regressor matrix: (N_images, 3)
@@ -83,8 +81,6 @@ def correlate_predictions_with_ratings(
     # Correlate each voxel's predictions with the 3 regressors
     # MATLAB corr(A, B) where A is (N, V) and B is (N, 3) → (V, 3)
     # Vectorized: center columns, compute correlation via dot products
-    N = enc_prediction.shape[0]
-    V = enc_prediction.shape[1]
 
     # Center predictions and regressors
     pred_c = enc_prediction - enc_prediction.mean(axis=0, keepdims=True)

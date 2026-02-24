@@ -1,0 +1,73 @@
+## CODE REVIEW FINDINGS — MASTER REFERENCE
+## CWD: C:\Users\David\Desktop\code\Brain-Encoders\amod_encoder
+## ENV: brain-encoders (Python 3.11, torch 2.10.0+cu128)
+
+## ======================== RUFF LINT (62 errors) ========================
+## Auto-fix unused imports: python -m ruff check src/ --select F401 --fix
+## Remaining manual fixes needed for F841, E501, E741, F541
+
+## ======================== BUGS TO FIX ========================
+
+## BUG 1: models/ridge.py — standardize_Y silently ignored
+## In _fit_numpy and _fit_torch, self._standardize_Y is accepted but never applied.
+## Fix: Add Y standardization logic like PLS does, or raise warning if True.
+
+## BUG 2: eval/stats_regression.py — missing interaction term
+## Default predictors list misses 'val_full_z:arous_full_z' interaction that MATLAB includes.
+## Fix: Add interaction term to default list, or document the difference.
+
+## BUG 3: diagnostics/tmaps.py — double Fisher's Z
+## average_and_ttest_correlation_maps may apply fishers_z on already-transformed data.
+## Fix: Add parameter flag or check if already transformed.
+
+## BUG 4: predict/artificial_stim.py — zscore ddof mismatch
+## Uses scipy.stats.zscore with ddof=0, but MATLAB zscore uses ddof=1.
+## Fix: Change to ddof=1 to match MATLAB.
+
+## BUG 5: stimuli/fc7_mat_loader.py — potential double-transpose
+## h5py loads transposed, then orientation logic may transpose again if shape[0]==4096.
+## Fix: Check orientation AFTER h5py transpose, not before.
+
+## BUG 6: eval/stats_ttests.py — FDR indexing with NaN p-values
+## Boolean mask valid & ~np.isnan(p_values) could differ from valid alone.
+## Fix: Ensure consistent NaN handling in FDR correction.
+
+## ======================== DATA REQUIREMENTS ========================
+
+## 1. ds002837 from OpenNeuro — BIDS dataset
+##    URL: https://openneuro.org/datasets/ds002837
+##    Needs: derivatives/sub-{01..20}/func/sub-{XX}_task-500daysofsummer_bold_blur_censor.nii.gz
+##    Size: ~50-100 GB (preprocessed fMRI data, 20 subjects)
+
+## 2. OSF fc7 features — 500_days_of_summer_fc7_features.mat
+##    URL: https://osf.io/dqx5b/ (Jang & Kragel 2024 AMOD project)
+##    The .mat file contains EmoNet fc7 features extracted frame-by-frame
+
+## 3. canlab2018 atlas masks (NIfTI binary masks)
+##    - canlab2018_amygdala_combined.nii.gz (whole amygdala)
+##    - canlab2018_CM.nii.gz (Centro-Medial)
+##    - canlab2018_SF.nii.gz (Superficial)
+##    - canlab2018_AStr.nii.gz (Amygdalostriatal)
+##    - canlab2018_LB.nii.gz (Lateral-Basal)
+##    Source: CanlabCore MATLAB toolbox / Tor Wager lab
+##    URL: https://github.com/canlab/CanlabCore
+
+## 4. Optional CSVs (for IAPS/OASIS prediction):
+##    - IAPS_data_amygdala_z.csv
+##    - OASIS_data_amygdala_z.csv
+##    From the same OSF project
+
+## ======================== CONFIG UPDATE NEEDED ========================
+## configs/amod_amygdala.yaml and configs/amod_subregions.yaml use Linux paths:
+##   bids_root: /data/ds002837
+##   osf_fc7_mat: /data/osf/500_days_of_summer_fc7_features.mat
+##   mask_path: /data/masks/canlab2018_amygdala_combined.nii.gz
+## These need updating to Windows paths before running locally.
+
+## ======================== PIPELINE COMMANDS ========================
+## 1. amod-encoder fit -c configs/amod_amygdala.yaml [--dry-run]
+## 2. amod-encoder eval -c configs/amod_amygdala.yaml
+## 3. amod-encoder validate -c configs/amod_amygdala.yaml
+## 4. amod-encoder predict-iaps-oasis -c configs/amod_amygdala.yaml
+## 5. amod-encoder compile-atanh -c configs/amod_subregions.yaml --parent-mask ...
+## 6. amod-encoder export-betas -c configs/amod_amygdala.yaml

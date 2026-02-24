@@ -1,0 +1,79 @@
+name: amod-encoder
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  # CUDA toolkit — matches module load cuda/12.6 on Midway3
+  - pytorch::pytorch=2.5.*
+  - pytorch::torchvision=0.20.*
+  - pytorch::pytorch-cuda=12.6
+
+  # Core scientific
+  - conda-forge::numpy>=1.24
+  - conda-forge::scipy>=1.10
+  - conda-forge::scikit-learn>=1.3
+  - conda-forge::pandas>=2.0
+  - conda-forge::matplotlib>=3.8
+  - conda-forge::pillow>=10.0
+  - conda-forge::h5py>=3.9
+  - conda-forge::joblib>=1.3        # parallel subject processing
+
+  # Neuroimaging
+  - conda-forge::nibabel>=5.0
+  - conda-forge::nilearn>=0.10
+
+  # Stats
+  - conda-forge::statsmodels>=0.14
+
+  # Config / CLI
+  - conda-forge::pyyaml>=6.0
+  - conda-forge::rich>=13.0
+  - conda-forge::pydantic>=2.0
+  - conda-forge::typer>=0.9
+
+  # Performance
+  - conda-forge::numexpr            # numpy expression acceleration
+  - conda-forge::mkl                # Intel MKL BLAS for numpy SVD
+  - conda-forge::mkl-service
+
+  - pip:
+    - amod-encoder[gpu]             # installs the package + optional GPU deps
+    # timm for future extractor backends (CLIP, DINOv2, etc.)
+    - timm>=1.0
+
+# --------------------------------------------------------------------------
+# Setup instructions for Midway3
+# --------------------------------------------------------------------------
+# 1. Log in and go to project root:
+#      ssh cnetid@midway3.rcc.uchicago.edu
+#      cd /project/pi-hcn1
+#      git clone <your-repo> amod-encoder
+#      cd amod-encoder
+#
+# 2. Load modules:
+#      module load cuda/12.6
+#      module load python/miniforge-25.3.0
+#
+# 3. Create environment (one-time, ~5-10 min):
+#      conda env create -f amod_encoder/environment_midway3.yml
+#
+# 4. Activate:
+#      conda activate amod-encoder
+#
+# 5. Install package in editable mode:
+#      cd amod_encoder
+#      pip install -e ".[gpu]"
+#
+# 6. Verify GPU + parallel setup:
+#      python -c "import torch; print(torch.cuda.device_count(), 'GPUs')"
+#      python -c "import joblib; print('joblib', joblib.__version__)"
+#
+# 7. Submit a job:
+#      sbatch --export=STAGE=amygdala,STEP=all scripts/submit.sh
+# --------------------------------------------------------------------------

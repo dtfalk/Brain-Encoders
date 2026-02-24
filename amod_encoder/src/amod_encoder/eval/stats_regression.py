@@ -25,7 +25,6 @@ MATLAB Correspondence:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -81,6 +80,7 @@ def run_per_subject_regression(
         predictors = [
             "val_full_z",
             "arous_full_z",
+            "val_full_z:arous_full_z",
             "median_red_z",
             "median_green_z",
             "median_blue_z",

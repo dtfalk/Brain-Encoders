@@ -22,7 +22,7 @@ import numpy as np
 
 from amod_encoder.models.base import EncodingModel
 from amod_encoder.utils.compute_backend import ComputeBackend
-from amod_encoder.utils.logging import get_logger, log_matlab_note
+from amod_encoder.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -100,13 +100,21 @@ class RidgeEncodingModel(EncodingModel):
         Xc = X - X_mean
         Yc = Y - Y_mean
 
-        # Optional standardization
+        # Optional X standardization
         if self.standardize_X:
             X_std = Xc.std(axis=0, ddof=1)
             X_std[X_std == 0] = 1.0
             Xc = Xc / X_std
         else:
             X_std = np.ones(D)
+
+        # Optional Y standardization
+        if self.standardize_Y:
+            Y_std = Yc.std(axis=0, ddof=1)
+            Y_std[Y_std == 0] = 1.0
+            Yc = Yc / Y_std
+        else:
+            Y_std = np.ones(V)
 
         # Ridge solution
         XtX = Xc.T @ Xc
@@ -117,8 +125,10 @@ class RidgeEncodingModel(EncodingModel):
         # Undo standardization
         if self.standardize_X:
             coef = coef / X_std.reshape(-1, 1)
+        if self.standardize_Y:
+            coef = coef * Y_std.reshape(1, -1)
 
-        # Intercept
+        # Intercept (computed from original-scale means)
         intercept = Y_mean - X_mean @ coef
 
         self._intercept = intercept
@@ -143,11 +153,23 @@ class RidgeEncodingModel(EncodingModel):
         Xc = X_t - X_mean
         Yc = Y_t - Y_mean
 
+        # Optional Y standardization
+        if self.standardize_Y:
+            Y_std = Yc.std(dim=0, correction=1)
+            Y_std[Y_std == 0] = 1.0
+            Yc = Yc / Y_std
+        else:
+            Y_std = torch.ones(V, device=Y_t.device, dtype=Y_t.dtype)
+
         # Ridge
         XtX = Xc.T @ Xc
         XtY = Xc.T @ Yc
         I = torch.eye(D, device=X_t.device, dtype=X_t.dtype) * self.alpha
         coef = torch.linalg.solve(XtX + I, XtY)
+
+        # Undo Y standardization
+        if self.standardize_Y:
+            coef = coef * Y_std.unsqueeze(0)
 
         # Intercept
         intercept = Y_mean - X_mean @ coef

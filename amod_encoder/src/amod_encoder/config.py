@@ -278,6 +278,25 @@ class ComputeConfig(BaseModel):
         default=False,
         description="Use automatic mixed precision (torch backend only)",
     )
+    # ── Multi-GPU / parallelism (cluster-only; all default to single-threaded) ──
+    n_workers: int = Field(
+        default=0,
+        description=(
+            "Number of parallel subject workers (0 or 1 = sequential, n > 1 = joblib). "
+            "Set to number of subjects for full parallelism on cluster."
+        ),
+    )
+    gpu_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "GPU device IDs to round-robin across workers. Empty = all workers use "
+            "cfg.device (e.g. 'cuda'). Example: [0,1,2,3] for 4× L40S."
+        ),
+    )
+    pin_memory: bool = Field(
+        default=False,
+        description="Pin CPU memory for faster host→device transfers (torch only).",
+    )
 
 
 class PipelineConfig(BaseModel):
@@ -317,21 +336,73 @@ class PipelineConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _find_config(path: Path) -> Path:
+    """Resolve a config path, searching common locations when not found directly.
+
+    Search order:
+    1. As given (absolute or relative to cwd)
+    2. Relative to the package root (directory containing pyproject.toml),
+       walking up from this source file
+    3. Relative to each parent of cwd up to filesystem root
+
+    Parameters
+    ----------
+    path : Path
+        Config path as supplied on the command line.
+
+    Returns
+    -------
+    Path
+        Resolved, existing path.
+
+    Raises
+    ------
+    FileNotFoundError
+        With a helpful message listing all locations tried.
+    """
+    # 1. Literal path
+    if path.exists():
+        return path
+
+    # 2. Relative to package root (find pyproject.toml walking up from config.py)
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").exists():
+            candidate = parent / path
+            if candidate.exists():
+                return candidate
+            break
+
+    # 3. Relative to cwd parents
+    cwd = Path.cwd()
+    for parent in [cwd] + list(cwd.parents):
+        candidate = parent / path
+        if candidate.exists():
+            return candidate
+
+    raise FileNotFoundError(
+        f"Config file not found: '{path}'\n"
+        f"  Tip: run from within amod_encoder/, or supply an absolute path.\n"
+        f"  Tried: {path.resolve()}, <package_root>/{path}, and cwd parents."
+    )
+
+
 def load_config(path: str | Path) -> PipelineConfig:
     """Load and validate a YAML config file.
 
     Parameters
     ----------
     path : str | Path
-        Path to YAML config file.
+        Path to YAML config file. Relative paths are resolved first from cwd,
+        then from the package root (the directory containing pyproject.toml).
 
     Returns
     -------
     PipelineConfig
         Validated configuration object.
     """
-    path = Path(path)
-    with open(path, "r") as f:
+    resolved = _find_config(Path(path))
+    with open(resolved, "r") as f:
         raw = yaml.safe_load(f)
     return PipelineConfig(**raw)
 

@@ -131,7 +131,7 @@ def _try_load_mat(mat_path: Path) -> np.ndarray:
                 raise KeyError(
                     f"Variable '{var_name}' not found. Available: {available}"
                 )
-    except (OSError, Exception) as e:
+    except (ImportError, OSError) as e:
         logger.debug("h5py load failed (%s), trying scipy.io.loadmat", e)
 
     # Fall back to scipy for older .mat formats

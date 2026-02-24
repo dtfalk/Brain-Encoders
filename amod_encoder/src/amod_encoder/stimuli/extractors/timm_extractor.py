@@ -147,7 +147,6 @@ class TimmExtractor(FeatureExtractor):
         torch.Tensor, shape (B, D)
             Pooled feature vectors.
         """
-        import torch
 
         if self._layer_name is None:
             # Default: use forward_features (penultimate)
@@ -161,7 +160,6 @@ class TimmExtractor(FeatureExtractor):
                 # Some models pool internally, some don't
             else:
                 # Try creating a feature extractor for intermediate layers
-                import timm
 
                 # Use timm's built-in feature extraction
                 self._model.reset_classifier(0)  # Remove classifier head

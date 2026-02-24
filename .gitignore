@@ -1,2 +1,13 @@
 cmds.txt
 **/__pycache__
+**/**data/actmax_weights
+**/**data/artificial_stimuli
+**/**data/artificial_stimuli
+**/**data/emonet_weights
+**/**data/features
+**/**data/masks
+**/**data/NNDb_ds002837
+**/**data/NNDb_ds002837
+**/**data/ratings
+**/**data/stimuli
+**/raw_data
