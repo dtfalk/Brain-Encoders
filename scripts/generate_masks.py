@@ -100,8 +100,12 @@ def generate_amygdala_masks(
         low = label.lower()
         if "amyg" not in low:
             return False
+        sub = subregion.lower()
+        # For multi-char terms, also try plain substring match
+        if len(sub) > 2 and sub in low:
+            return True
         # Accept: (CM), -CM, _CM, .CM, " CM" — but NOT "CMN" unless exact
-        pat = rf'[\s\-_\.(]{subregion.lower()}[\s\-_\).,]|[\s\-_\.(]{subregion.lower()}$'
+        pat = rf'[\s\-_\.(]{sub}[\s\-_\).,]|[\s\-_\.(]{sub}$'
         return bool(re.search(pat, low))
 
     region_map: dict[str, list[int]] = {}
