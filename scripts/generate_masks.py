@@ -80,7 +80,8 @@ def generate_amygdala_masks(
         atlas_name="maxprob-thr0-2mm",
         data_dir=data_dir,
     )
-    jimg = nib.load(juelich["maps"])
+    maps = juelich["maps"]
+    jimg = nib.load(maps) if isinstance(maps, (str, os.PathLike)) else maps
     jdata = np.asarray(jimg.dataobj, dtype=np.int16)
     jlabels: list[str] = juelich["labels"]
 
@@ -122,7 +123,8 @@ def generate_amygdala_masks(
             atlas_name="sub-maxprob-thr0-2mm",
             data_dir=data_dir,
         )
-        ho_img = nib.load(ho["maps"])
+        ho_maps = ho["maps"]
+        ho_img = nib.load(ho_maps) if isinstance(ho_maps, (str, os.PathLike)) else ho_maps
         ho_data = np.asarray(ho_img.dataobj, dtype=np.int16)
         ho_labels: list[str] = ho["labels"]
 
