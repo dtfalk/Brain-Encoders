@@ -85,23 +85,46 @@ def generate_amygdala_masks(
     jdata = np.asarray(jimg.dataobj, dtype=np.int16)
     jlabels: list[str] = juelich["labels"]
 
-    # Identify amygdala sub-region label indices in the maxprob volume.
-    # Typical label strings:
-    #   "GM Amygdala (CM) - left hemisphere"
-    #   "GM Amygdala (LB) - right hemisphere"  etc.
+    # Debug: show all amygdala-related labels so we can verify matching
+    amy_labels = [(i, lab) for i, lab in enumerate(jlabels) if "amyg" in lab.lower()]
+    print(f"  Juelich amygdala labels found ({len(amy_labels)}):")
+    for i, lab in amy_labels:
+        print(f"    [{i}] {lab}")
+
+    # Match amygdala sub-regions flexibly — labels vary across nilearn/FSL
+    # versions (e.g. "Amygdala (CM)", "Amygdala-CM", "Amyg_CM", etc.)
+    import re
+
+    def _match_amyg_subregion(label: str, subregion: str) -> bool:
+        """True if *label* refers to amygdala subregion *subregion*."""
+        low = label.lower()
+        if "amyg" not in low:
+            return False
+        # Accept: (CM), -CM, _CM, .CM, " CM" — but NOT "CMN" unless exact
+        pat = rf'[\s\-_\.(]{subregion.lower()}[\s\-_\).,]|[\s\-_\.(]{subregion.lower()}$'
+        return bool(re.search(pat, low))
+
     region_map: dict[str, list[int]] = {}
-    for abbrev, patterns in {
-        "CM":  ["amygdala (cm)"],
-        "SF":  ["amygdala (sf)"],
-        "LB":  ["amygdala (lb)"],
-        # AStr is not in the standard Juelich atlas — handled below
-        "AStr": ["amygdala (astr)", "amygdalostriatal"],
-    }.items():
+    for abbrev in ("CM", "SF", "LB", "AStr"):
+        # Also try alternate names
+        search_terms = [abbrev]
+        if abbrev == "AStr":
+            search_terms.extend(["ASTA", "amygdalostriatal"])
+        if abbrev == "LB":
+            search_terms.append("BL")  # basolateral
+        if abbrev == "SF":
+            search_terms.append("superficial")
+        if abbrev == "CM":
+            search_terms.append("centromedial")
+
         indices: list[int] = []
-        for pat in patterns:
-            indices.extend(_find_label_indices(jlabels, pat))
+        for term in search_terms:
+            for i, lab in enumerate(jlabels):
+                if i not in indices and _match_amyg_subregion(lab, term):
+                    indices.append(i)
         if indices:
             region_map[abbrev] = indices
+            print(f"  {abbrev} matched labels: {[jlabels[i] for i in indices]}")
 
     masks: dict[str, nib.Nifti1Image] = {}
     combined = np.zeros(jimg.shape[:3], dtype=np.uint8)
