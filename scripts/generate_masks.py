@@ -111,7 +111,7 @@ def generate_amygdala_masks(
         if abbrev == "AStr":
             search_terms.extend(["ASTA", "amygdalostriatal"])
         if abbrev == "LB":
-            search_terms.append("BL")  # basolateral
+            search_terms.extend(["BL", "laterobasal", "basolateral", "lateral basal"])
         if abbrev == "SF":
             search_terms.append("superficial")
         if abbrev == "CM":
@@ -139,27 +139,54 @@ def generate_amygdala_masks(
         masks[name] = nib.Nifti1Image(mask, jimg.affine, jimg.header)
         combined = np.maximum(combined, mask)
 
+    # --- LB derivation fallback if not found in Juelich -------------------
+    if "LB" not in masks or int(np.asarray(masks["LB"].dataobj).sum()) == 0:
+        print("  LB not matched in Juelich — deriving from Harvard-Oxford amygdala minus CM ∪ SF …")
+        if "ho_amy" not in dir():
+            ho = datasets.fetch_atlas_harvard_oxford(
+                atlas_name="sub-maxprob-thr0-2mm",
+                data_dir=data_dir,
+            )
+            ho_maps = ho["maps"]
+            ho_img = nib.load(ho_maps) if isinstance(ho_maps, (str, os.PathLike)) else ho_maps
+            ho_data = np.asarray(ho_img.dataobj, dtype=np.int16)
+            ho_labels = ho["labels"]
+            amy_idx = _find_label_indices(ho_labels, "amygdala")
+            ho_amy = np.isin(ho_data, amy_idx).astype(np.uint8)
+            if ho_img.shape[:3] != jimg.shape[:3]:
+                ho_amy_nii = nib.Nifti1Image(ho_amy, ho_img.affine, ho_img.header)
+                ho_amy_nii = resample_to_img(ho_amy_nii, jimg, interpolation="nearest")
+                ho_amy = np.asarray(ho_amy_nii.dataobj, dtype=np.uint8)
+
+        known_not_lb = np.zeros(jimg.shape[:3], dtype=np.uint8)
+        for sub in ("CM", "SF"):
+            if sub in masks:
+                known_not_lb = np.maximum(known_not_lb, np.asarray(masks[sub].dataobj))
+        lb = np.logical_and(ho_amy > 0, known_not_lb == 0).astype(np.uint8)
+        n_lb = int(lb.sum())
+        print(f"    LB derived: {n_lb} voxels")
+        masks["LB"] = nib.Nifti1Image(lb, jimg.affine, jimg.header)
+        combined = np.maximum(combined, lb)
+
     # --- AStr derivation if not found in Juelich -------------------------
     if "AStr" not in masks or int(np.asarray(masks["AStr"].dataobj).sum()) == 0:
         print("  AStr not in Juelich atlas — deriving from Harvard-Oxford …")
-        ho = datasets.fetch_atlas_harvard_oxford(
-            atlas_name="sub-maxprob-thr0-2mm",
-            data_dir=data_dir,
-        )
-        ho_maps = ho["maps"]
-        ho_img = nib.load(ho_maps) if isinstance(ho_maps, (str, os.PathLike)) else ho_maps
-        ho_data = np.asarray(ho_img.dataobj, dtype=np.int16)
-        ho_labels: list[str] = ho["labels"]
-
-        # Find left/right amygdala in Harvard-Oxford
-        amy_idx = _find_label_indices(ho_labels, "amygdala")
-        ho_amy = np.isin(ho_data, amy_idx).astype(np.uint8)
-
-        # Resample H-O amygdala to Juelich space if shapes differ
-        if ho_img.shape[:3] != jimg.shape[:3]:
-            ho_amy_nii = nib.Nifti1Image(ho_amy, ho_img.affine, ho_img.header)
-            ho_amy_nii = resample_to_img(ho_amy_nii, jimg, interpolation="nearest")
-            ho_amy = np.asarray(ho_amy_nii.dataobj, dtype=np.uint8)
+        # Reuse ho_amy if already fetched during LB derivation
+        if "ho_amy" not in dir():
+            ho = datasets.fetch_atlas_harvard_oxford(
+                atlas_name="sub-maxprob-thr0-2mm",
+                data_dir=data_dir,
+            )
+            ho_maps = ho["maps"]
+            ho_img = nib.load(ho_maps) if isinstance(ho_maps, (str, os.PathLike)) else ho_maps
+            ho_data = np.asarray(ho_img.dataobj, dtype=np.int16)
+            ho_labels = ho["labels"]
+            amy_idx = _find_label_indices(ho_labels, "amygdala")
+            ho_amy = np.isin(ho_data, amy_idx).astype(np.uint8)
+            if ho_img.shape[:3] != jimg.shape[:3]:
+                ho_amy_nii = nib.Nifti1Image(ho_amy, ho_img.affine, ho_img.header)
+                ho_amy_nii = resample_to_img(ho_amy_nii, jimg, interpolation="nearest")
+                ho_amy = np.asarray(ho_amy_nii.dataobj, dtype=np.uint8)
 
         # AStr = Harvard-Oxford amygdala minus (CM ∪ SF ∪ LB)
         known = np.zeros(jimg.shape[:3], dtype=np.uint8)
