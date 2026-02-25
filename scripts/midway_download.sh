@@ -96,41 +96,38 @@ echo ""
 
 # ══════════════════════════════════════════════════════════════
 # STEP 3 — OASIS images (public, ~100 MB)
+#          Only needed for predict-iaps-oasis step (not core fit/eval)
 # ══════════════════════════════════════════════════════════════
 echo "━━━ [3/6] OASIS stimulus images ━━━"
-mkdir -p "$DATA/stimuli/oasis"
-cd "$DATA/stimuli/oasis"
-osf -p 3mfps clone . 2>&1 | tail -3 || echo "  ⚠ Try: wget -O OASIS.zip https://osf.io/3mfps/download && unzip OASIS.zip"
+OASIS_DIR="$DATA/stimuli/oasis"
+mkdir -p "$OASIS_DIR"
+if [ "$(find "$OASIS_DIR" -name '*.jpg' -o -name '*.png' 2>/dev/null | wc -l)" -gt 100 ]; then
+    echo "  Already have OASIS images — skipping"
+else
+    OASIS_ZIP="$OASIS_DIR/OASIS.zip"
+    if [ ! -f "$OASIS_ZIP" ]; then
+        echo "  Downloading OASIS.zip from OSF 3mfps …"
+        wget -q --show-progress -O "$OASIS_ZIP" "https://osf.io/3mfps/download" 2>&1 \
+            || curl -L -o "$OASIS_ZIP" "https://osf.io/3mfps/download" 2>&1 \
+            || echo "  ⚠ OASIS download failed. Manual: wget -O OASIS.zip https://osf.io/3mfps/download"
+    fi
+    if [ -f "$OASIS_ZIP" ] && [ -s "$OASIS_ZIP" ]; then
+        echo "  Extracting …"
+        unzip -qo "$OASIS_ZIP" -d "$OASIS_DIR" && rm -f "$OASIS_ZIP"
+    fi
+fi
 cd "$PROJECT_ROOT"
 echo ""
 
 # ══════════════════════════════════════════════════════════════
-# STEP 4 — CanlabCore masks (amygdala + glasser visual cortex)
+# STEP 4 — Brain masks (amygdala + glasser visual cortex)
+#          Generated from standard atlases via Python/nilearn
+#          (CanlabCore does NOT ship standalone atlas NIfTIs)
 # ══════════════════════════════════════════════════════════════
-echo "━━━ [4/6] CanlabCore masks ━━━"
-mkdir -p "$DATA/masks/canlab2018" "$DATA/masks/glasser"
-
-CANLAB="$TOOLS/CanlabCore"
-if [ ! -d "$CANLAB" ]; then
-    git clone --depth 1 https://github.com/canlab/CanlabCore.git "$CANLAB"
-fi
-
-echo "  Copying amygdala masks..."
-find "$CANLAB" -iname "*amygdala*" -name "*.nii*" | while read f; do
-    bn=$(basename "$f")
-    cp -v "$f" "$DATA/masks/canlab2018/$bn"
-done
-
-echo "  Copying Glasser/visual masks..."
-find "$CANLAB" \( -iname "*glasser*" -o -iname "*_V1*" -o -iname "*_V2*" \
-    -o -iname "*_V3*" -o -iname "*TE1*" -o -iname "*TE2*" -o -iname "*_TF*" \) \
-    -name "*.nii*" | while read f; do
-    bn=$(basename "$f")
-    cp -v "$f" "$DATA/masks/glasser/$bn"
-done
-
-echo "  Masks:"
-ls -1 "$DATA/masks/canlab2018/" "$DATA/masks/glasser/" 2>/dev/null
+echo "━━━ [4/6] Brain masks (nilearn + Glasser download) ━━━"
+python "$PROJECT_ROOT/scripts/generate_masks.py" \
+    --output-dir "$DATA/masks" \
+    --cache-dir  "$DATA/masks/.atlas_cache"
 echo ""
 
 # ══════════════════════════════════════════════════════════════
